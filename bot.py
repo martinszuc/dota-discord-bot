@@ -7,10 +7,10 @@ from timer import GameTimer
 from roshan import RoshanTimer
 from events import EVENTS, PERIODIC_EVENTS
 
-# Initialize intents and bot
+# Initialize intents and bot, disabling the default help command
 intents = discord.Intents.default()
 intents.message_content = True
-bot = commands.Bot(command_prefix='!', intents=intents)
+bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
 
 # Instantiate timers
 game_timer = GameTimer()
@@ -125,8 +125,6 @@ async def list_events(ctx):
             await timer_channel.send("No events set.")
     else:
         await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.")
-
-bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
 
 @bot.command(name="help")
 async def custom_help(ctx):
