@@ -2,6 +2,8 @@ import discord
 from discord.ext import commands
 from timer import GameTimer
 import os
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # Define intents
 intents = discord.Intents.default()
@@ -69,6 +71,21 @@ async def remove_event(ctx, message: str):
         await timer_channel.send(f"Removed event '{message}'")
     else:
         await ctx.send(f"No channel named '{TIMER_CHANNEL_NAME}' found. Please create it and try again.")
+
+# Minimal HTTP server to keep Repl.it URL active
+class SimpleHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+        self.wfile.write(b'Bot is running!')
+
+def run_server():
+    server = HTTPServer(('0.0.0.0', 8080), SimpleHandler)
+    server.serve_forever()
+
+# Run the web server in a separate thread
+threading.Thread(target=run_server, daemon=True).start()
 
 # Run the bot using the token stored in the environment variable
 bot.run(os.getenv('DISCORD_BOT_TOKEN'))
