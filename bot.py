@@ -7,7 +7,7 @@ import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from timer import GameTimer
 from roshan import RoshanTimer
-from events import EVENTS, PERIODIC_EVENTS
+from events import STATIC_EVENTS, PERIODIC_EVENTS
 import logging
 
 # Setup logging
@@ -56,8 +56,6 @@ async def on_ready():
             logging.warning(f"Channel '{TIMER_CHANNEL_NAME}' not found in {guild.name}. Please create one.")
         else:
             logging.info(f"Channel '{TIMER_CHANNEL_NAME}' found in {guild.name}.")
-    # Start syncing commands if using slash commands (not needed for prefix commands)
-    # await bot.tree.sync()
 
 # Error handling
 @bot.event
@@ -148,11 +146,11 @@ async def add_periodic_event(ctx, start_time: str, interval: str, end_time: str,
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
         try:
-            game_timer.add_custom_event(start_time, interval, end_time, message, [target_group])
+            event_id = game_timer.add_custom_event(start_time, interval, end_time, message, [target_group])
             await timer_channel.send(
-                f"✅ Added periodic event '{message}' every `{interval}`, from `{start_time}` to `{end_time}`, for `{target_group}`."
+                f"✅ Added periodic event '{message}' with ID `{event_id}` every `{interval}`, from `{start_time}` to `{end_time}`, for `{target_group}`."
             )
-            logging.info(f"Periodic event added by {ctx.author}: start_time={start_time}, interval={interval}, end_time={end_time}, message='{message}', target_group='{target_group}'")
+            logging.info(f"Periodic event added by {ctx.author}: ID={event_id}, start_time={start_time}, interval={interval}, end_time={end_time}, message='{message}', target_group='{target_group}'")
         except ValueError as ve:
             await ctx.send(f"❌ {ve}")
             logging.error(f"Error adding periodic event: {ve}")
@@ -161,30 +159,29 @@ async def add_periodic_event(ctx, start_time: str, interval: str, end_time: str,
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
 @bot.command()
-async def remove_event(ctx, *, message: str):
-    """Remove an event by message."""
-    logging.info(f"Command '!remove_event' invoked by {ctx.author} with message='{message}'")
+async def remove_event(ctx, event_id: int):
+    """Remove an event by its unique ID."""
+    logging.info(f"Command '!remove_event' invoked by {ctx.author} with event_id={event_id}")
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
         # First, attempt to remove from static EVENTS
-        if message in EVENTS:
-            del EVENTS[message]
-            await timer_channel.send(f"✅ Removed static event '{message}'.")
-            logging.info(f"Static event '{message}' removed by {ctx.author}")
+        if event_id in STATIC_EVENTS:
+            del STATIC_EVENTS[event_id]
+            await timer_channel.send(f"✅ Removed static event ID `{event_id}`.")
+            logging.info(f"Static event ID {event_id} removed by {ctx.author}")
             return
 
         # Next, attempt to remove from custom_events
-        removed = game_timer.remove_custom_event(message)
+        removed = game_timer.remove_custom_event(event_id)
         if removed:
-            await timer_channel.send(f"✅ Removed custom event '{message}'.")
-            logging.info(f"Custom event '{message}' removed by {ctx.author}")
+            await timer_channel.send(f"✅ Removed custom event ID `{event_id}`.")
+            logging.info(f"Custom event ID {event_id} removed by {ctx.author}")
         else:
-            await ctx.send(f"❌ Event '{message}' not found.")
-            logging.warning(f"Attempted to remove non-existent event '{message}' by {ctx.author}")
+            await ctx.send(f"❌ Event with ID `{event_id}` not found.")
+            logging.warning(f"Attempted to remove non-existent event ID {event_id} by {ctx.author}")
     else:
         await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
-
 
 @bot.command()
 async def list_events(ctx):
@@ -195,19 +192,20 @@ async def list_events(ctx):
         messages = []
 
         # List static events
-        for time_str, (msg, _) in EVENTS.items():
-            messages.append(f"🟢 **Static Event** at `{time_str}`: {msg}")
+        for event_id, event in STATIC_EVENTS.items():
+            messages.append(f"🟢 **Static Event** | ID: `{event_id}` | Time: `{event['time']}` | Message: {event['message']} | Targets: `{', '.join(event['target_groups'])}`")
 
         # List periodic events
-        for start, interval, end, (msg, _) in PERIODIC_EVENTS:
-            messages.append(f"🔄 **Periodic Event** starting at `{start}`, every `{interval}`, until `{end}`: {msg}")
+        for event_id, event in PERIODIC_EVENTS.items():
+            messages.append(f"🔄 **Predefined Periodic Event** | ID: `{event_id}` | Start: `{event['start_time']}` | Interval: `{event['interval']}` | End: `{event['end_time']}` | Message: {event['message']} | Targets: `{', '.join(event['target_groups'])}`")
 
         # List custom events
         custom_events = game_timer.get_custom_events()
-        for event in custom_events:
-            messages.append(
-                f"🔁 **Custom Event** starting at `{event['start_time']}`, every `{event['interval']}`, until `{event['end_time']}`: {event['message']}"
-            )
+        for event_id, event in custom_events.items():
+            start_time_formatted = f"{event['start_time'] // 60:02}:{event['start_time'] % 60:02}"
+            end_time_formatted = f"{event['end_time'] // 60:02}:{event['end_time'] % 60:02}"
+            interval_formatted = f"{event['interval'] // 60:02}:{event['interval'] % 60:02}"
+            messages.append(f"🔁 **Custom Periodic Event** | ID: `{event_id}` | Start: `{start_time_formatted}` | Interval: `{interval_formatted}` | End: `{end_time_formatted}` | Message: {event['message']} | Targets: `{', '.join(event['target_groups'])}`")
 
         if messages:
             embed = discord.Embed(
@@ -260,7 +258,7 @@ async def bot_help(ctx):
     )
     embed.add_field(
         name="!remove_event",
-        value="`!remove_event <message>`\nRemoves an event by its message.\n**Example:** `!remove_event \"XP runes spawning soon\"`",
+        value="`!remove_event <event_id>`\nRemoves an event by its unique ID.\n**Example:** `!remove_event 5`",
         inline=False
     )
     embed.add_field(

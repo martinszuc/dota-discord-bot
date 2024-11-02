@@ -1,12 +1,14 @@
-# Static events defined with 'mm:ss' time format, message, and target groups
-EVENTS = {
-    "05:25": ("Power rune soon!", ["mid", "supps"]),
-    "06:20": ("XP rune soon!", ["off", "safe"]),
-    "07:00": ("XP rune spawned!", ["off", "supps"]),
-    "15:00": ("Roshan may spawn now!", ["off", "supps"]),
+# events.py
+
+# Static events defined with unique IDs, 'MM:SS' time format, message, and target groups
+STATIC_EVENTS = {
+    1: {"time": "05:25", "message": "🛡️ **Power Rune soon!**", "target_groups": ["mid", "supps"]},
+    2: {"time": "06:20", "message": "💎 **XP Rune soon!**", "target_groups": ["off", "safe"]},
+    3: {"time": "07:00", "message": "💎 **XP Rune spawned!**", "target_groups": ["off", "supps"]},
+    4: {"time": "15:00", "message": "🦍 **Roshan may spawn now!**", "target_groups": ["off", "supps"]},
 }
 
-# Periodic events with start time, interval, end time, message, and target groups
-PERIODIC_EVENTS = [
-    ("05:40", "02:00", "40:00", ("Power runes!", ["all"])),
-]
+# Periodic events defined with unique IDs, start time, interval, end time, message, and target groups
+PERIODIC_EVENTS = {
+    1: {"start_time": "05:40", "interval": "02:00", "end_time": "40:00", "message": "🔄 **Power Runes!**", "target_groups": ["all"]},
+}
