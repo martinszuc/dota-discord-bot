@@ -74,7 +74,7 @@ async def on_command_error(ctx, error):
         logging.error(f"Unhandled error in command '{ctx.command}': {error}")
 
 # Commands
-@bot.command()
+@bot.command(name="startgame")
 async def startgame(ctx, countdown: int, *usernames):
     """Start the game timer with a countdown and player usernames."""
     logging.info(f"Command '!startgame' invoked by {ctx.author} with countdown={countdown} and usernames={usernames}")
@@ -92,7 +92,7 @@ async def startgame(ctx, countdown: int, *usernames):
         await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
-@bot.command()
+@bot.command(name="stopgame")
 async def stopgame(ctx):
     """Stop the game timer."""
     logging.info(f"Command '!stopgame' invoked by {ctx.author}")
@@ -105,7 +105,7 @@ async def stopgame(ctx):
         await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
-@bot.command()
+@bot.command(name="rosh")
 async def rosh(ctx):
     """Log Roshan's death and start the respawn timer."""
     logging.info(f"Command '!rosh' invoked by {ctx.author}")
@@ -122,16 +122,16 @@ async def rosh(ctx):
         await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
-@bot.command()
+@bot.command(name="add-static-event")
 async def add_static_event(ctx, time: str, message: str, target_group: str):
     """Add a static event."""
-    logging.info(f"Command '!add_static_event' invoked by {ctx.author} with time={time}, message='{message}', target_group='{target_group}'")
+    logging.info(f"Command '!add-static-event' invoked by {ctx.author} with time={time}, message='{message}', target_group='{target_group}'")
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
         try:
-            game_timer.add_event(time, message, target_group)
-            await timer_channel.send(f"✅ Added static event '{message}' at {time} for `{target_group}`.")
-            logging.info(f"Static event added by {ctx.author}: time={time}, message='{message}', target_group='{target_group}'")
+            event_id = game_timer.add_event(time, message, target_group)
+            await timer_channel.send(f"✅ Added static event '{message}' with ID `{event_id}` at {time} for `{target_group}`.")
+            logging.info(f"Static event added by {ctx.author}: ID={event_id}, time={time}, message='{message}', target_group='{target_group}'")
         except ValueError as ve:
             await ctx.send(f"❌ {ve}")
             logging.error(f"Error adding static event: {ve}")
@@ -139,10 +139,10 @@ async def add_static_event(ctx, time: str, message: str, target_group: str):
         await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
-@bot.command()
+@bot.command(name="add-periodic-event")
 async def add_periodic_event(ctx, start_time: str, interval: str, end_time: str, message: str, target_group: str):
     """Add a periodic event."""
-    logging.info(f"Command '!add_periodic_event' invoked by {ctx.author} with start_time={start_time}, interval={interval}, end_time={end_time}, message='{message}', target_group='{target_group}'")
+    logging.info(f"Command '!add-periodic-event' invoked by {ctx.author} with start_time={start_time}, interval={interval}, end_time={end_time}, message='{message}', target_group='{target_group}'")
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
         try:
@@ -158,10 +158,10 @@ async def add_periodic_event(ctx, start_time: str, interval: str, end_time: str,
         await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
-@bot.command()
+@bot.command(name="remove-event")
 async def remove_event(ctx, event_id: int):
     """Remove an event by its unique ID."""
-    logging.info(f"Command '!remove_event' invoked by {ctx.author} with event_id={event_id}")
+    logging.info(f"Command '!remove-event' invoked by {ctx.author} with event_id={event_id}")
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
         # First, attempt to remove from static EVENTS
@@ -183,10 +183,10 @@ async def remove_event(ctx, event_id: int):
         await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
-@bot.command()
+@bot.command(name="list-events")
 async def list_events(ctx):
     """List all currently set events."""
-    logging.info(f"Command '!list_events' invoked by {ctx.author}")
+    logging.info(f"Command '!list-events' invoked by {ctx.author}")
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
         messages = []
@@ -195,7 +195,7 @@ async def list_events(ctx):
         for event_id, event in STATIC_EVENTS.items():
             messages.append(f"🟢 **Static Event** | ID: `{event_id}` | Time: `{event['time']}` | Message: {event['message']} | Targets: `{', '.join(event['target_groups'])}`")
 
-        # List periodic events
+        # List predefined periodic events
         for event_id, event in PERIODIC_EVENTS.items():
             messages.append(f"🔄 **Predefined Periodic Event** | ID: `{event_id}` | Start: `{event['start_time']}` | Interval: `{event['interval']}` | End: `{event['end_time']}` | Message: {event['message']} | Targets: `{', '.join(event['target_groups'])}`")
 
@@ -247,23 +247,23 @@ async def bot_help(ctx):
         inline=False
     )
     embed.add_field(
-        name="!add_static_event",
-        value="`!add_static_event <time:MM:SS> <message> <target_group>`\nAdds a static event.\n**Example:** `!add_static_event 10:00 \"Power Rune spawned!\" mid`",
+        name="!add-static-event",
+        value="`!add-static-event <time:MM:SS> <message> <target_group>`\nAdds a static event.\n**Example:** `!add-static-event 10:00 \"Power Rune spawned!\" mid`",
         inline=False
     )
     embed.add_field(
-        name="!add_periodic_event",
-        value="`!add_periodic_event <start_time:MM:SS> <interval:MM:SS> <end_time:MM:SS> <message> <target_group>`\nAdds a periodic event.\n**Example:** `!add_periodic_event 06:40 02:00 40:00 \"XP runes spawning soon\" all`",
+        name="!add-periodic-event",
+        value="`!add-periodic-event <start_time:MM:SS> <interval:MM:SS> <end_time:MM:SS> <message> <target_group>`\nAdds a periodic event.\n**Example:** `!add-periodic-event 06:40 02:00 40:00 \"XP runes spawning soon\" all`",
         inline=False
     )
     embed.add_field(
-        name="!remove_event",
-        value="`!remove_event <event_id>`\nRemoves an event by its unique ID.\n**Example:** `!remove_event 5`",
+        name="!remove-event",
+        value="`!remove-event <event_id>`\nRemoves an event by its unique ID.\n**Example:** `!remove-event 5`",
         inline=False
     )
     embed.add_field(
-        name="!list_events",
-        value="`!list_events`\nLists all currently set events.\n**Example:** `!list_events`",
+        name="!list-events",
+        value="`!list-events`\nLists all currently set events.\n**Example:** `!list-events`",
         inline=False
     )
     embed.add_field(
