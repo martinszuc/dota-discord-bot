@@ -126,8 +126,10 @@ async def list_events(ctx):
     else:
         await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.")
 
-@bot.command()
-async def help(ctx):
+bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
+
+@bot.command(name="help")
+async def custom_help(ctx):
     """Show available commands."""
     commands_info = (
         "`!startgame <countdown> <username1> <username2> ...` - Start game timer with 5 players.\n"
