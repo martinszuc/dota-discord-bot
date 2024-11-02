@@ -45,6 +45,20 @@ class GameTimer:
         """Check if the timer is running."""
         return self.timer_task is not None and self.timer_task.is_running()
 
+    def add_event(self, start_time, message, target_group):
+        """Add a static event with a unique ID."""
+        event_time = parse_time(start_time)
+        # Check for duplicate event times in STATIC_EVENTS
+        for event in STATIC_EVENTS.values():
+            if event["time"] == start_time and event["message"] == message:
+                raise ValueError(f"❌ An event with message '{message}' at time '{start_time}' already exists.")
+        # Assign a unique ID
+        event_id = self.next_event_id
+        STATIC_EVENTS[event_id] = {"time": start_time, "message": message, "target_groups": [target_group]}
+        self.next_event_id += 1
+        logging.info(f"Static event added: ID={event_id}, time={start_time}, message='{message}', target_group='{target_group}'")
+        return event_id
+
     def add_custom_event(self, start_time, interval, end_time, message, target_groups):
         """Add a custom periodic event with a unique ID."""
         start_seconds = parse_time(start_time)
@@ -118,7 +132,7 @@ class GameTimer:
                 if (self.time_elapsed - start_seconds) % interval_seconds == 0:
                     mentions = mention_players(event["target_groups"], self.usernames)
                     await self.channel.send(f"🔄 {event['message']} {mentions}")
-                    logging.info(f"Periodic event triggered: ID={event_id}, message='{event['message']}', interval={event['interval']}")
+                    logging.info(f"Predefined periodic event triggered: ID={event_id}, message='{event['message']}', interval={event['interval']}")
 
     async def _check_custom_events(self):
         """Check and trigger custom periodic events."""
