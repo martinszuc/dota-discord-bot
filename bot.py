@@ -11,7 +11,7 @@ from events import EVENTS, PERIODIC_EVENTS
 # Initialize bot and intents
 intents = discord.Intents.default()
 intents.message_content = True
-bot = commands.Bot(intents=intents, help_command=None)
+bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
 # Instantiate timers
 game_timer = GameTimer()
