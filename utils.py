@@ -1,11 +1,12 @@
 def parse_time(time_str):
-    # Convert time in "mm:ss" format or seconds to total seconds
+    """Convert time in 'mm:ss' format or seconds to total seconds."""
     if ":" in time_str:
         minutes, seconds = map(int, time_str.split(":"))
         return minutes * 60 + seconds
     return int(time_str)
 
 def mention_players(target_groups, usernames):
+    """Generate mentions for target player groups."""
     # Map player positions to usernames
     position_map = {
         "safe": [usernames[0], usernames[4]],

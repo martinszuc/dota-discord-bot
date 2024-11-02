@@ -8,5 +8,5 @@ EVENTS = {
 
 # Periodic events with start time, interval, end time, message, and target groups
 PERIODIC_EVENTS = [
-    ("05:30", "02:00", "20:00", ("Power runes!", ["all"])),
+    ("05:40", "02:00", "40:00", ("Power runes!", ["all"])),
 ]
