@@ -5,7 +5,6 @@ STATIC_EVENTS = {
     1: {"time": "05:25", "message": "🛡️ **Power Rune soon!**", "target_groups": ["mid", "supps"]},
     2: {"time": "06:20", "message": "💎 **XP Rune soon!**", "target_groups": ["off", "safe"]},
     3: {"time": "07:00", "message": "💎 **XP Rune spawned!**", "target_groups": ["off", "supps"]},
-    4: {"time": "15:00", "message": "🦍 **Roshan may spawn now!**", "target_groups": ["off", "supps"]},
 }
 
 # Periodic events defined with unique IDs, start time, interval, end time, message, and target groups
