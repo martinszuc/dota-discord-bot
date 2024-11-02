@@ -166,16 +166,25 @@ async def remove_event(ctx, *, message: str):
     logging.info(f"Command '!remove_event' invoked by {ctx.author} with message='{message}'")
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
+        # First, attempt to remove from static EVENTS
+        if message in EVENTS:
+            del EVENTS[message]
+            await timer_channel.send(f"✅ Removed static event '{message}'.")
+            logging.info(f"Static event '{message}' removed by {ctx.author}")
+            return
+
+        # Next, attempt to remove from custom_events
         removed = game_timer.remove_custom_event(message)
         if removed:
-            await timer_channel.send(f"✅ Removed event '{message}'.")
-            logging.info(f"Event '{message}' removed by {ctx.author}")
+            await timer_channel.send(f"✅ Removed custom event '{message}'.")
+            logging.info(f"Custom event '{message}' removed by {ctx.author}")
         else:
             await ctx.send(f"❌ Event '{message}' not found.")
             logging.warning(f"Attempted to remove non-existent event '{message}' by {ctx.author}")
     else:
         await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
+
 
 @bot.command()
 async def list_events(ctx):
