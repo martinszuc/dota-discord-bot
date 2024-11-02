@@ -19,6 +19,8 @@ roshan_timer = RoshanTimer()
 
 # Constants
 TIMER_CHANNEL_NAME = "timer-bot"
+TESTING_GUILD_ID = YOUR_GUILD_ID  # Replace with your guild's ID
+testing_guild = discord.Object(id=TESTING_GUILD_ID)
 
 # HTTP server to keep bot alive
 class SimpleHandler(BaseHTTPRequestHandler):
@@ -36,19 +38,14 @@ def run_server():
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user}')
-    for guild in bot.guilds:
-        timer_channel = discord.utils.get(guild.text_channels, name=TIMER_CHANNEL_NAME)
-        if not timer_channel:
-            print(f"Channel '{TIMER_CHANNEL_NAME}' not found in {guild.name}. Please create it.")
-
     try:
-        synced = await bot.tree.sync()  # Sync application commands (slash commands) with Discord
-        print(f"Synced {len(synced)} command(s)")
+        await bot.tree.sync(guild=testing_guild)
+        print(f"Commands synced to guild {TESTING_GUILD_ID}")
     except Exception as e:
         print(f"Failed to sync commands: {e}")
 
 # Slash Commands
-@bot.tree.command(name="startgame", description="Start the game timer with a countdown and player usernames.")
+@bot.tree.command(name="startgame", description="Start the game timer with a countdown and player usernames.", guild=testing_guild)
 async def startgame(interaction: discord.Interaction, countdown: int, username1: str, username2: str, username3: str, username4: str, username5: str):
     """Start the game timer with a countdown and 5 player usernames."""
     timer_channel = discord.utils.get(interaction.guild.text_channels, name=TIMER_CHANNEL_NAME)
@@ -147,20 +144,20 @@ async def list_events(interaction: discord.Interaction):
     else:
         await interaction.response.send_message(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.", ephemeral=True)
 
-@bot.tree.command(name="help", description="Show available commands with examples.")
-async def custom_help(interaction: discord.Interaction):
-    """Show available commands and examples."""
+@bot.command(name="bot-help")
+async def bot_help(ctx):
+    """Show available commands with examples."""
     commands_info = (
-        "`/startgame countdown:3 username1:martin username2:alice username3:bob username4:jane username5:john` - Start game timer with 5 players.\n"
-        "`/stopgame` - Stop the game timer.\n"
-        "`/rosh` - Log Roshan's death and start an 8-minute timer.\n"
-        "`/add_static_event time:00:30 message:'Power Rune soon' target_group:mid` - Add a static event.\n"
-        "`/add_periodic_event start_time:00:30 interval:02:00 end_time:10:00 message:'Rune spawn' target_group:all` - Add a periodic event.\n"
-        "`/remove_event message:'Rune spawn'` - Remove an event by message.\n"
-        "`/list_events` - List all currently set events.\n"
-        "`/help` - Show this help message."
+        "`!startgame <countdown> <username1> <username2> <username3> <username4> <username5>` - Start game timer with 5 players.\n"
+        "`!stopgame` - Stop the game timer.\n"
+        "`!rosh` - Log Roshan's death and start an 8-minute timer.\n"
+        "`!add_static_event <time:00:00> <message> <target_group>` - Add a static event.\n"
+        "`!add_periodic_event <start_time:00:00> <interval:00:00> <end_time:00:00> <message> <target_group>` - Add a periodic event.\n"
+        "`!remove_event <message>` - Remove an event by message.\n"
+        "`!list_events` - List all currently set events.\n"
+        "`!bot-help` - Show this help message."
     )
-    await interaction.response.send_message(commands_info, ephemeral=True)
+    await ctx.send(commands_info)
 
 # Start the HTTP server in a separate thread
 threading.Thread(target=run_server, daemon=True).start()

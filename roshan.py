@@ -3,7 +3,7 @@ from discord.ext import tasks
 
 class RoshanTimer:
     """Class to manage Roshan's respawn timer."""
-    ROSH_RESPAWN_MSG = "Roshan is alive! Latest possible spawn time is {}."
+    ROSH_RESPAWN_MSG = "RS maybe alive! worst case scenario is {}."
 
     def __init__(self):
         self.roshan_killed_time = None
