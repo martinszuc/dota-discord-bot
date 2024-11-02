@@ -3,8 +3,12 @@ from discord.ext import commands
 from timer import GameTimer
 import os
 
-# Initialize the bot with the command prefix
-bot = commands.Bot(command_prefix='!')
+# Define intents
+intents = discord.Intents.default()
+intents.message_content = True  # Enable message content if your bot reads message content
+
+# Initialize the bot with intents
+bot = commands.Bot(command_prefix='!', intents=intents)
 game_timer = GameTimer()
 
 # Channel name for all timer messages
