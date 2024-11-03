@@ -4,11 +4,10 @@ from discord.ext import tasks
 from utils import parse_time
 from events import STATIC_EVENTS, PERIODIC_EVENTS
 import discord
-import pyttsx3
-import os
-import edge_tts
+from edge_tts import Communicate
 import tempfile
-import re  # For removing markdown formatting
+import re
+import os
 
 class GameTimer:
     """Class to manage the game timer and events."""
@@ -27,10 +26,6 @@ class GameTimer:
         self.paused = False
         self.pause_condition = asyncio.Condition()
         self.voice_client = None  # Discord voice client
-
-        # Initialize TTS engine
-        self.tts_engine = pyttsx3.init()
-        self.tts_engine.setProperty('rate', 150)  # Adjust speech rate if necessary
 
     async def start(self, channel, countdown, usernames, mention_users=False):
         """Start the game timer."""
@@ -221,13 +216,13 @@ class GameTimer:
                 clean_message = re.sub(r'[\*\_\~\`]', '', message)
 
                 # Generate speech audio from message using edge_tts
-                voice = "en-US-AmberNeural"  # We'll choose a voice later
+                voice = "en-US-AmberNeural"  # Choose the voice you prefer
                 output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-                communicate = edge_tts.Communicate(text=clean_message, voice=voice)
+                communicate = Communicate(text=clean_message, voice=voice)
                 await communicate.save(output_file.name)
 
-                # Play the TTS audio
-                audio_source = discord.FFmpegPCMAudio(output_file.name)
+                # Play the audio in the voice channel
+                audio_source = discord.FFmpegPCMAudio(source=output_file.name)
                 if not self.voice_client.is_playing():
                     self.voice_client.play(audio_source)
                 else:
