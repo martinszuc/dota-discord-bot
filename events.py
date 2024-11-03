@@ -2,8 +2,8 @@
 
 # Static events defined with unique IDs, 'MM:SS' time format, message, and target groups
 STATIC_EVENTS = {
-    1: {"time": "00:00", "message": "🛡️ **Game has started**", "target_groups": ["all"]},
-    2: {"time": "03:30", "message": "🛡️ **Power Rune spawning in 30 seconds!**", "target_groups": ["mid", "supps"]},
+    1: {"time": "00:01", "message": "🛡️ **Game has started**", "target_groups": ["all"]},
+    2: {"time": "05:30", "message": "🛡️ **Power Rune spawning in 30 seconds!**", "target_groups": ["mid", "supps"]},
     3: {"time": "01:30", "message": "🚩 **First Flagbearer creep spawning in 30 seconds!**", "target_groups": ["all"]},
     4: {"time": "02:00", "message": "🚩 **First Flagbearer creep has spawned!**", "target_groups": ["all"]},
     5: {"time": "20:00", "message": "💥 **First Tormentor has spawned!**", "target_groups": ["all"]},
