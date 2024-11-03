@@ -78,30 +78,32 @@ async def on_command_error(ctx, error):
 # Commands
 @bot.command(name="start")
 async def start(ctx, countdown: int):
-    """Start the game timer with a countdown and players in the DOTA voice channel."""
+    """Start the game timer with a countdown and automatically mention players in the 'DOTA' voice channel."""
     logging.info(f"Command '!start' invoked by {ctx.author} with countdown={countdown}")
 
-    # Find the voice channel named 'DOTA'
-    voice_channel = discord.utils.get(ctx.guild.voice_channels, name=VOICE_CHANNEL_NAME)
-    if not voice_channel:
-        await ctx.send(f"❌ Voice channel '{VOICE_CHANNEL_NAME}' not found.")
-        logging.error(f"Voice channel '{VOICE_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
+    # Find the "DOTA" voice channel
+    dota_channel = discord.utils.get(ctx.guild.voice_channels, name="DOTA")
+    if not dota_channel:
+        await ctx.send("❌ 'DOTA' voice channel not found. Please create it and try again.")
+        logging.warning("'DOTA' voice channel not found.")
         return
 
-    # Get the list of members in the voice channel
-    usernames = voice_channel.members
-    if len(usernames) != 5:
-        await ctx.send(f"❌ There must be exactly 5 players in the '{VOICE_CHANNEL_NAME}' voice channel.")
-        logging.warning(f"Incorrect number of players in '{VOICE_CHANNEL_NAME}' voice channel. Found: {len(usernames)}")
+    # Get the list of members in the "DOTA" voice channel
+    players_in_channel = [member for member in dota_channel.members if not member.bot]
+    if not players_in_channel:
+        await ctx.send("❌ No players in the 'DOTA' voice channel.")
+        logging.warning("No players found in the 'DOTA' voice channel.")
         return
 
+    # Mention all players in the "DOTA" voice channel
+    player_mentions = ', '.join(member.mention for member in players_in_channel)
+
+    # Send a message in the timer channel and start the timer
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
-        # Use the 'mention' attribute for proper user mentions
-        player_mentions = ', '.join(user.mention for user in usernames)
         await timer_channel.send(f"🕒 Starting game timer with players: {player_mentions}")
-        await game_timer.start(timer_channel, countdown, usernames)
-        logging.info(f"Game timer started by {ctx.author} with countdown={countdown} and usernames={usernames}")
+        await game_timer.start(timer_channel, countdown, players_in_channel)
+        logging.info(f"Game timer started by {ctx.author} with countdown={countdown} and players={player_mentions}")
     else:
         await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
