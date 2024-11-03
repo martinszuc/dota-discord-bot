@@ -22,6 +22,7 @@ logging.basicConfig(
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True  # Enable members intent
+intents.voice_states = True  # Enable voice states
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
 # Instantiate timers
@@ -109,12 +110,21 @@ async def start(ctx, countdown: int, mentions: str = None):
     # Send a message in the timer channel and start the timer
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
-        await timer_channel.send(f"Starting game timer with players: {player_names}", tts=True)
+        await timer_channel.send(f"Starting game timer with players: {player_names}")
         await game_timer.start(timer_channel, countdown, players_in_channel, mention_users)
         logging.info(f"Game timer started by {ctx.author} with countdown={countdown} and players={player_names}")
     else:
         await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
+
+    # Connect to the voice channel
+    if dota_channel:
+        voice_client = discord.utils.get(bot.voice_clients, guild=ctx.guild)
+        if voice_client is None:
+            voice_client = await dota_channel.connect()
+        elif voice_client.channel != dota_channel:
+            await voice_client.move_to(dota_channel)
+        game_timer.voice_client = voice_client
 
 @bot.command(name="stop")
 async def stopgame(ctx):
@@ -124,7 +134,7 @@ async def stopgame(ctx):
         timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
         if timer_channel:
             await game_timer.stop()
-            await timer_channel.send("Game timer stopped.", tts=True)
+            await timer_channel.send("Game timer stopped.")
             logging.info(f"Game timer stopped by {ctx.author}")
         else:
             await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
@@ -133,105 +143,13 @@ async def stopgame(ctx):
         await ctx.send("Game timer is not currently running.")
         logging.warning(f"{ctx.author} attempted to stop the timer, but it was not running.")
 
-@bot.command(name="pause")
-async def pausegame(ctx):
-    """Pause the game timer and all events."""
-    logging.info(f"Command '!pause' invoked by {ctx.author}")
-    if game_timer.is_running():
-        if game_timer.is_paused():
-            await ctx.send("Game timer is already paused.")
-            logging.warning(f"{ctx.author} attempted to pause the timer, but it was already paused.")
-        else:
-            await game_timer.pause()
-            await ctx.send("Game timer paused.", tts=True)
-            logging.info(f"Game timer paused by {ctx.author}")
-    else:
-        await ctx.send("Game timer is not currently running.")
-        logging.warning(f"{ctx.author} attempted to pause the timer, but it was not running.")
+    # Disconnect from the voice channel
+    voice_client = discord.utils.get(bot.voice_clients, guild=ctx.guild)
+    if voice_client:
+        await voice_client.disconnect()
+        game_timer.voice_client = None
 
-@bot.command(name="unpause")
-async def unpausegame(ctx):
-    """Resume the game timer and all events."""
-    logging.info(f"Command '!unpause' invoked by {ctx.author}")
-    if game_timer.is_running():
-        if not game_timer.is_paused():
-            await ctx.send("Game timer is not paused.")
-            logging.warning(f"{ctx.author} attempted to unpause the timer, but it was not paused.")
-        else:
-            await game_timer.unpause()
-            await ctx.send("Game timer resumed.", tts=True)
-            logging.info(f"Game timer resumed by {ctx.author}")
-    else:
-        await ctx.send("Game timer is not currently running.")
-        logging.warning(f"{ctx.author} attempted to unpause the timer, but it was not running.")
-
-@bot.command(name="rosh")
-async def rosh(ctx):
-    """Log Roshan's death and start the respawn timer."""
-    logging.info(f"Command '!rosh' invoked by {ctx.author}")
-    if not game_timer.is_running():
-        await ctx.send("Game is not active.")
-        logging.warning(f"Roshan timer attempted by {ctx.author} but game is not active.")
-        return
-
-    timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
-    if timer_channel:
-        await roshan_timer.start(timer_channel)
-        logging.info(f"Roshan timer started by {ctx.author}")
-    else:
-        await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
-        logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
-
-@bot.command(name="glyph")
-async def glyph(ctx):
-    """Start a 5-minute timer for the enemy's glyph cooldown."""
-    logging.info(f"Command '!glyph' invoked by {ctx.author}")
-    timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
-    if timer_channel:
-        await timer_channel.send("Enemy glyph used! Starting 5-minute cooldown timer.", tts=True)
-        await game_timer.start_glyph_timer(timer_channel)
-        logging.info(f"Glyph timer started by {ctx.author}")
-    else:
-        await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
-        logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
-
-@bot.command(name="bot-help")
-async def bot_help(ctx):
-    """Show available commands with examples."""
-    logging.info(f"Command '!bot-help' invoked by {ctx.author}")
-    help_message = """
-**Dota Timer Bot - Help**
-
-- `!start <countdown> [mention]`
-  - Starts the game timer with a countdown. Add 'mention' to mention players.
-  - **Example:** `!start 3` or `!start 3 mention`
-
-- `!stop`
-  - Stops the current game timer.
-  - **Example:** `!stop`
-
-- `!pause`
-  - Pauses the game timer and all events.
-  - **Example:** `!pause`
-
-- `!unpause`
-  - Resumes the game timer and all events.
-  - **Example:** `!unpause`
-
-- `!rosh`
-  - Logs Roshan's death and starts an 8-minute respawn timer.
-  - **Example:** `!rosh`
-
-- `!glyph`
-  - Starts a 5-minute cooldown timer for the enemy's glyph.
-  - **Example:** `!glyph`
-
-- `!bot-help`
-  - Shows this help message.
-  - **Example:** `!bot-help`
-    """
-    await ctx.send(help_message)
-    logging.info(f"Help message sent to {ctx.author}")
+# You may need to adjust other commands if they require voice functionality
 
 # Start the HTTP server in a separate thread
 threading.Thread(target=run_server, daemon=True).start()
