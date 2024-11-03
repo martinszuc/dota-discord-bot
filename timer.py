@@ -6,6 +6,9 @@ from events import STATIC_EVENTS, PERIODIC_EVENTS
 import discord
 import pyttsx3
 import os
+import edge_tts
+import tempfile
+import re  # For removing markdown formatting
 
 class GameTimer:
     """Class to manage the game timer and events."""
@@ -214,13 +217,17 @@ class GameTimer:
         # Announce message in voice channel
         if self.voice_client and self.voice_client.is_connected():
             try:
-                # Generate speech audio from message
-                filename = f"temp_audio.mp3"
-                self.tts_engine.save_to_file(message, filename)
-                self.tts_engine.runAndWait()
+                # Remove markdown formatting from the message
+                clean_message = re.sub(r'[\*\_\~\`]', '', message)
+
+                # Generate speech audio from message using edge_tts
+                voice = "en-US-AriaNeural"  # Example of a female voice
+                output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+                communicate = edge_tts.Communicate(text=clean_message, voice=voice)
+                await communicate.save(output_file.name)
 
                 # Play the audio in the voice channel
-                audio_source = discord.FFmpegPCMAudio(executable="ffmpeg", source=filename)
+                audio_source = discord.FFmpegPCMAudio(output_file.name)
                 if not self.voice_client.is_playing():
                     self.voice_client.play(audio_source)
                 else:
@@ -231,7 +238,8 @@ class GameTimer:
                     await asyncio.sleep(0.1)
 
                 # Clean up temporary audio file
-                os.remove(filename)
+                output_file.close()
+                os.unlink(output_file.name)
             except Exception as e:
                 logging.error(f"Error during voice announcement: {e}", exc_info=True)
         else:

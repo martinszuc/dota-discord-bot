@@ -7,10 +7,8 @@ from timer import GameTimer
 from roshan import RoshanTimer
 from events import STATIC_EVENTS, PERIODIC_EVENTS
 import logging
-import ctypes
 import ctypes.util
 
-# Load Opus library
 opus_lib = ctypes.util.find_library('opus')
 discord.opus.load_opus(opus_lib)
 
