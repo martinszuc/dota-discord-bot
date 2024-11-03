@@ -196,7 +196,7 @@ async def remove_event(ctx, event_id: int):
         await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
-@bot.command(name="list-events")
+@bot.command(name="list")
 async def list_events(ctx):
     """List all currently set events."""
     logging.info(f"Command '!list-events' invoked by {ctx.author}")
@@ -275,8 +275,8 @@ async def bot_help(ctx):
         inline=False
     )
     embed.add_field(
-        name="!list-events",
-        value="`!list-events`\nLists all currently set events.\n**Example:** `!list-events`",
+        name="!list",
+        value="`!list`\nLists all currently set events.\n**Example:** `!list`",
         inline=False
     )
     embed.add_field(
