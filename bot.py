@@ -122,6 +122,19 @@ async def rosh(ctx):
         await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
+@bot.command(name="glyph")
+async def glyph(ctx):
+    """Start a 5-minute timer for the enemy's glyph cooldown."""
+    logging.info(f"Command '!glyph' invoked by {ctx.author}")
+    timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
+    if timer_channel:
+        await timer_channel.send("🛡️ **Enemy glyph used!** Starting 5-minute cooldown timer.")
+        await game_timer.start_glyph_timer(timer_channel)
+        logging.info(f"Glyph timer started by {ctx.author}")
+    else:
+        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.")
+        logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
+
 @bot.command(name="add-static-event")
 async def add_static_event(ctx, time: str, message: str, target_group: str):
     """Add a static event."""

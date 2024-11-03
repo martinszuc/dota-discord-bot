@@ -145,3 +145,12 @@ class GameTimer:
                     mentions = mention_players(event["target_groups"], self.usernames)
                     await self.channel.send(f"🔁 {event['message']} {mentions}")
                     logging.info(f"Custom periodic event triggered: ID={event_id}, message='{event['message']}', interval={event['interval']}")
+
+    async def start_glyph_timer(self, channel):
+        """Start a 5-minute timer for the enemy's glyph cooldown."""
+        glyph_cooldown = 5 * 60  # 5 minutes in seconds
+        await asyncio.sleep(glyph_cooldown - 30)  # Notify 30 seconds before cooldown ends
+        await channel.send("🛡️ **Enemy glyph available in 30 seconds!**")
+        await asyncio.sleep(30)
+        await channel.send("🛡️ **Enemy glyph cooldown has ended!**")
+        logging.info("Enemy glyph cooldown ended.")
