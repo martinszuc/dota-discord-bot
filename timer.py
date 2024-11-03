@@ -1,3 +1,5 @@
+# timer.py
+
 import asyncio
 import logging
 import re
@@ -36,37 +38,41 @@ class GameTimer:
         self.paused = False
         logging.info(f"Game timer started with countdown={countdown} seconds and usernames={usernames}")
 
-        if self.timer_task.is_running():
-            self.timer_task.cancel()
-            logging.info("Existing timer task canceled before starting a new one.")
-        self.timer_task.start()
+        # Start the timer task if not already running
+        if not self.timer_task.is_running():
+            self.timer_task.start()
+            logging.info("Timer task started.")
 
-        if self.auto_stop_task.is_running():
-            self.auto_stop_task.cancel()
-            logging.info("Existing auto-stop task canceled before starting a new one.")
-        self.auto_stop_task.start()
+        # Start the auto-stop task if not already running
+        if not self.auto_stop_task.is_running():
+            self.auto_stop_task.start()
+            logging.info("Auto-stop task started.")
 
     async def stop(self):
         """Stop the game timer."""
         if self.timer_task.is_running():
             self.timer_task.cancel()
-            logging.info("Game timer task canceled.")
+            logging.info("Timer task canceled.")
         if self.auto_stop_task.is_running():
             self.auto_stop_task.cancel()
             logging.info("Auto-stop task canceled.")
+
         self.time_elapsed = 0
         self.custom_events.clear()
         self.paused = False
         logging.info("Game timer stopped and all custom events cleared.")
+
         if self.channel:
             await self.channel.send("Game timer has been stopped and all events have been cleared.")
             self.channel = None
         else:
             logging.warning("Cannot send stop message; channel is not set.")
+
         # Disconnect voice client if connected
         if self.voice_client and self.voice_client.is_connected():
             await self.voice_client.disconnect()
             self.voice_client = None
+            logging.info("Voice client disconnected.")
 
     async def pause(self):
         """Pause the game timer."""
@@ -83,6 +89,10 @@ class GameTimer:
     def is_running(self):
         """Check if the timer is running."""
         return self.timer_task.is_running()
+
+    def is_paused(self):
+        """Check if the timer is paused."""
+        return self.paused
 
     def add_event(self, start_time, message, target_group):
         """Add a static event with a unique ID."""
@@ -137,27 +147,22 @@ class GameTimer:
         """Get all custom periodic events."""
         return self.custom_events
 
-    def is_paused(self):
-        """Check if the timer is paused."""
-        return self.paused
-
     @tasks.loop(seconds=1)
     async def _timer_task(self):
         """Main timer loop that checks events every second."""
-        while True:
-            if self.paused:
-                logging.debug("Game timer is paused.")
-                async with self.pause_condition:
-                    await self.pause_condition.wait()
-            self.time_elapsed += 1
-            logging.debug(f"Time elapsed: {self.time_elapsed} seconds")
-            try:
-                await self._check_static_events()
-                await self._check_periodic_events()
-                await self._check_custom_events()
-            except Exception as e:
-                logging.error(f"Error in _timer_task: {e}", exc_info=True)
-            await asyncio.sleep(1)
+        if self.paused:
+            logging.debug("Game timer is paused.")
+            async with self.pause_condition:
+                await self.pause_condition.wait()
+
+        self.time_elapsed += 1
+        logging.debug(f"Time elapsed: {self.time_elapsed} seconds")
+        try:
+            await self._check_static_events()
+            await self._check_periodic_events()
+            await self._check_custom_events()
+        except Exception as e:
+            logging.error(f"Error in _timer_task: {e}", exc_info=True)
 
     @tasks.loop(seconds=1)
     async def _auto_stop_task(self):
@@ -223,7 +228,7 @@ class GameTimer:
                     return
 
                 # Select the desired voice
-                voice = "en-US-AriaNeural"  # Example of a female voice
+                voice = "en-US-AriaNeural"  # Change this based on `list_voices.py` output
                 logging.info(f"Using voice: {voice}")
 
                 # Generate speech audio from message using edge_tts
