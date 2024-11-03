@@ -223,7 +223,7 @@ class GameTimer:
                     return
 
                 # Select the desired voice
-                voice = "en-US-AmberNeural"  # Change this to your preferred voice
+                voice = "en-US-AriaNeural"  # Example of a female voice
                 logging.info(f"Using voice: {voice}")
 
                 # Generate speech audio from message using edge_tts
