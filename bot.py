@@ -133,6 +133,38 @@ async def stopgame(ctx):
         await ctx.send("Game timer is not currently running.")
         logging.warning(f"{ctx.author} attempted to stop the timer, but it was not running.")
 
+@bot.command(name="pause")
+async def pausegame(ctx):
+    """Pause the game timer and all events."""
+    logging.info(f"Command '!pause' invoked by {ctx.author}")
+    if game_timer.is_running():
+        if game_timer.is_paused():
+            await ctx.send("Game timer is already paused.")
+            logging.warning(f"{ctx.author} attempted to pause the timer, but it was already paused.")
+        else:
+            await game_timer.pause()
+            await ctx.send("Game timer paused.", tts=True)
+            logging.info(f"Game timer paused by {ctx.author}")
+    else:
+        await ctx.send("Game timer is not currently running.")
+        logging.warning(f"{ctx.author} attempted to pause the timer, but it was not running.")
+
+@bot.command(name="unpause")
+async def unpausegame(ctx):
+    """Resume the game timer and all events."""
+    logging.info(f"Command '!unpause' invoked by {ctx.author}")
+    if game_timer.is_running():
+        if not game_timer.is_paused():
+            await ctx.send("Game timer is not paused.")
+            logging.warning(f"{ctx.author} attempted to unpause the timer, but it was not paused.")
+        else:
+            await game_timer.unpause()
+            await ctx.send("Game timer resumed.", tts=True)
+            logging.info(f"Game timer resumed by {ctx.author}")
+    else:
+        await ctx.send("Game timer is not currently running.")
+        logging.warning(f"{ctx.author} attempted to unpause the timer, but it was not running.")
+
 @bot.command(name="rosh")
 async def rosh(ctx):
     """Log Roshan's death and start the respawn timer."""
@@ -163,8 +195,6 @@ async def glyph(ctx):
         await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
-# You can adjust or remove the following commands if you're not using target groups anymore.
-
 @bot.command(name="bot-help")
 async def bot_help(ctx):
     """Show available commands with examples."""
@@ -179,6 +209,14 @@ async def bot_help(ctx):
 - `!stop`
   - Stops the current game timer.
   - **Example:** `!stop`
+
+- `!pause`
+  - Pauses the game timer and all events.
+  - **Example:** `!pause`
+
+- `!unpause`
+  - Resumes the game timer and all events.
+  - **Example:** `!unpause`
 
 - `!rosh`
   - Logs Roshan's death and starts an 8-minute respawn timer.

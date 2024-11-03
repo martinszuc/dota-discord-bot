@@ -18,6 +18,8 @@ class GameTimer:
         self.timer_task = self._timer_task
         self.auto_stop_task = self._auto_stop_task
         self.mention_users = False
+        self.paused = False
+        self.pause_condition = asyncio.Condition()
 
     async def start(self, channel, countdown, usernames, mention_users=False):
         """Start the game timer."""
@@ -25,6 +27,7 @@ class GameTimer:
         self.time_elapsed = -countdown
         self.usernames = usernames  # These are discord.Member objects
         self.mention_users = mention_users
+        self.paused = False
         logging.info(f"Game timer started with countdown={countdown} seconds and usernames={usernames}")
 
         if self.timer_task.is_running():
@@ -47,12 +50,25 @@ class GameTimer:
             logging.info("Auto-stop task canceled.")
         self.time_elapsed = 0
         self.custom_events.clear()
+        self.paused = False
         logging.info("Game timer stopped and all custom events cleared.")
         if self.channel:
             await self.channel.send("Game timer has been stopped and all events have been cleared.", tts=True)
             self.channel = None
         else:
             logging.warning("Cannot send stop message; channel is not set.")
+
+    async def pause(self):
+        """Pause the game timer."""
+        self.paused = True
+        logging.info("Game timer paused.")
+
+    async def unpause(self):
+        """Unpause the game timer."""
+        self.paused = False
+        logging.info("Game timer resumed.")
+        async with self.pause_condition:
+            self.pause_condition.notify_all()
 
     def is_running(self):
         """Check if the timer is running."""
@@ -111,17 +127,27 @@ class GameTimer:
         """Get all custom periodic events."""
         return self.custom_events
 
+    def is_paused(self):
+        """Check if the timer is paused."""
+        return self.paused
+
     @tasks.loop(seconds=1)
     async def _timer_task(self):
         """Main timer loop that checks events every second."""
-        self.time_elapsed += 1
-        logging.debug(f"Time elapsed: {self.time_elapsed} seconds")
-        try:
-            await self._check_static_events()
-            await self._check_periodic_events()
-            await self._check_custom_events()
-        except Exception as e:
-            logging.error(f"Error in _timer_task: {e}", exc_info=True)
+        while True:
+            if self.paused:
+                logging.debug("Game timer is paused.")
+                async with self.pause_condition:
+                    await self.pause_condition.wait()
+            self.time_elapsed += 1
+            logging.debug(f"Time elapsed: {self.time_elapsed} seconds")
+            try:
+                await self._check_static_events()
+                await self._check_periodic_events()
+                await self._check_custom_events()
+            except Exception as e:
+                logging.error(f"Error in _timer_task: {e}", exc_info=True)
+            await asyncio.sleep(1)
 
     @tasks.loop(seconds=1)
     async def _auto_stop_task(self):
@@ -179,5 +205,3 @@ class GameTimer:
         await asyncio.sleep(30)
         await channel.send("Enemy glyph cooldown has ended!", tts=True)
         logging.info("Enemy glyph cooldown ended.")
-
-    # You can remove or adjust methods related to target groups as they're no longer used.
