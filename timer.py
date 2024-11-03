@@ -221,12 +221,12 @@ class GameTimer:
                 clean_message = re.sub(r'[\*\_\~\`]', '', message)
 
                 # Generate speech audio from message using edge_tts
-                voice = "en-US-AmberNeural"  # Choose the voice you prefer
+                voice = "en-US-AmberNeural"  # We'll choose a voice later
                 output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
                 communicate = edge_tts.Communicate(text=clean_message, voice=voice)
                 await communicate.save(output_file.name)
 
-                # Play the audio in the voice channel
+                # Play the TTS audio
                 audio_source = discord.FFmpegPCMAudio(output_file.name)
                 if not self.voice_client.is_playing():
                     self.voice_client.play(audio_source)
