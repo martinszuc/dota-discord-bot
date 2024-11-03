@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from discord.ext import tasks
-from utils import mention_players, parse_time
+from utils import parse_time
 from events import STATIC_EVENTS, PERIODIC_EVENTS
 
 
@@ -45,7 +45,6 @@ class GameTimer:
         if self.auto_stop_task and self.auto_stop_task.is_running():
             self.auto_stop_task.cancel()
             logging.info("Auto-stop task canceled.")
-            self.auto_stop_task = None
         self.time_elapsed = 0
         self.custom_events.clear()
         logging.info("Game timer stopped and all custom events cleared.")
@@ -133,10 +132,9 @@ class GameTimer:
         for event_id, event in STATIC_EVENTS.items():
             event_time = parse_time(event["time"])
             if self.time_elapsed == event_time:
-                mentions = mention_players(event["target_groups"], self.usernames)
+                mentions = " ".join(user.mention for user in self.usernames)  # Mention all users
                 await self.channel.send(f"📢 {event['message']} {mentions}")
-                logging.info(
-                    f"Static event triggered: ID={event_id}, time={event['time']}, message='{event['message']}', target_groups={event['target_groups']}")
+                logging.info(f"Static event triggered: ID={event_id}, time={event['time']}, message='{event['message']}")
 
     async def _check_periodic_events(self):
         """Check and trigger predefined periodic events."""
@@ -146,10 +144,9 @@ class GameTimer:
             end_seconds = parse_time(event["end_time"])
             if start_seconds <= self.time_elapsed <= end_seconds:
                 if (self.time_elapsed - start_seconds) % interval_seconds == 0:
-                    mentions = mention_players(event["target_groups"], self.usernames)
+                    mentions = " ".join(user.mention for user in self.usernames)  # Mention all users
                     await self.channel.send(f"🔄 {event['message']} {mentions}")
-                    logging.info(
-                        f"Predefined periodic event triggered: ID={event_id}, message='{event['message']}', interval={event['interval']}")
+                    logging.info(f"Predefined periodic event triggered: ID={event_id}, message='{event['message']}', interval={event['interval']}")
 
     async def _check_custom_events(self):
         """Check and trigger custom periodic events."""
@@ -159,10 +156,9 @@ class GameTimer:
             end_seconds = event["end_time"]
             if start_seconds <= self.time_elapsed <= end_seconds:
                 if (self.time_elapsed - start_seconds) % interval_seconds == 0:
-                    mentions = mention_players(event["target_groups"], self.usernames)
+                    mentions = " ".join(user.mention for user in self.usernames)  # Mention all users
                     await self.channel.send(f"🔁 {event['message']} {mentions}")
-                    logging.info(
-                        f"Custom periodic event triggered: ID={event_id}, message='{event['message']}', interval={event['interval']}")
+                    logging.info(f"Custom periodic event triggered: ID={event_id}, message='{event['message']}', interval={event['interval']}")
 
     async def start_glyph_timer(self, channel):
         """Start a 5-minute timer for the enemy's glyph cooldown."""
