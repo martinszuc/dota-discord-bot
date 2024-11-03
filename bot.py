@@ -23,6 +23,7 @@ logging.basicConfig(
 # Initialize intents and bot, disabling the default help command
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True  # Enable members intent
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
 # Instantiate timers
@@ -75,7 +76,7 @@ async def on_command_error(ctx, error):
 
 # Commands
 @bot.command(name="start")
-async def start(ctx, countdown: int, *usernames):
+async def start(ctx, countdown: int, *usernames: discord.Member):
     """Start the game timer with a countdown and player usernames."""
     logging.info(f"Command '!start' invoked by {ctx.author} with countdown={countdown} and usernames={usernames}")
     if len(usernames) != 5:
@@ -85,24 +86,26 @@ async def start(ctx, countdown: int, *usernames):
 
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
-        await timer_channel.send(f"🕒 Starting game timer with players: {', '.join(usernames)}")
+        # Use the 'mention' attribute for proper user mentions
+        player_mentions = ', '.join(user.mention for user in usernames)
+        await timer_channel.send(f"🕒 Starting game timer with players: {player_mentions}")
         await game_timer.start(timer_channel, countdown, usernames)
         logging.info(f"Game timer started by {ctx.author} with countdown={countdown} and usernames={usernames}")
     else:
-        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.")
+        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
 @bot.command(name="stop")
 async def stopgame(ctx):
     """Stop the game timer."""
-    logging.info(f"Command '!stopgame' invoked by {ctx.author}")
+    logging.info(f"Command '!stop' invoked by {ctx.author}")
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
         await game_timer.stop()
         await timer_channel.send("🛑 Game timer stopped.")
         logging.info(f"Game timer stopped by {ctx.author}")
     else:
-        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.")
+        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
 @bot.command(name="rosh")
@@ -119,7 +122,7 @@ async def rosh(ctx):
         await roshan_timer.start(timer_channel)
         logging.info(f"Roshan timer started by {ctx.author}")
     else:
-        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.")
+        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
 @bot.command(name="glyph")
@@ -132,13 +135,13 @@ async def glyph(ctx):
         await game_timer.start_glyph_timer(timer_channel)
         logging.info(f"Glyph timer started by {ctx.author}")
     else:
-        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.")
+        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
 @bot.command(name="add-event")
 async def add_static_event(ctx, time: str, message: str, target_group: str):
     """Add a static event."""
-    logging.info(f"Command '!add-static-event' invoked by {ctx.author} with time={time}, message='{message}', target_group='{target_group}'")
+    logging.info(f"Command '!add-event' invoked by {ctx.author} with time={time}, message='{message}', target_group='{target_group}'")
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
         try:
@@ -149,13 +152,13 @@ async def add_static_event(ctx, time: str, message: str, target_group: str):
             await ctx.send(f"❌ {ve}")
             logging.error(f"Error adding static event: {ve}")
     else:
-        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.")
+        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
 @bot.command(name="add-periodic")
 async def add_periodic_event(ctx, start_time: str, interval: str, end_time: str, message: str, target_group: str):
     """Add a periodic event."""
-    logging.info(f"Command '!add-periodic-event' invoked by {ctx.author} with start_time={start_time}, interval={interval}, end_time={end_time}, message='{message}', target_group='{target_group}'")
+    logging.info(f"Command '!add-periodic' invoked by {ctx.author} with start_time={start_time}, interval={interval}, end_time={end_time}, message='{message}', target_group='{target_group}'")
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
         try:
@@ -168,7 +171,7 @@ async def add_periodic_event(ctx, start_time: str, interval: str, end_time: str,
             await ctx.send(f"❌ {ve}")
             logging.error(f"Error adding periodic event: {ve}")
     else:
-        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.")
+        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
 @bot.command(name="remove-event")
@@ -193,13 +196,13 @@ async def remove_event(ctx, event_id: int):
             await ctx.send(f"❌ Event with ID `{event_id}` not found.")
             logging.warning(f"Attempted to remove non-existent event ID {event_id} by {ctx.author}")
     else:
-        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.")
+        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
 @bot.command(name="list")
 async def list_events(ctx):
     """List all currently set events."""
-    logging.info(f"Command '!list-events' invoked by {ctx.author}")
+    logging.info(f"Command '!list' invoked by {ctx.author}")
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
         messages = []
@@ -232,7 +235,7 @@ async def list_events(ctx):
             await timer_channel.send("ℹ️ No events set.")
             logging.info(f"No events to list for {ctx.author}")
     else:
-        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create it and try again.")
+        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
 @bot.command(name="bot-help")
@@ -257,6 +260,11 @@ async def bot_help(ctx):
     embed.add_field(
         name="!rosh",
         value="`!rosh`\nLogs Roshan's death and starts an 8-minute respawn timer.\n**Example:** `!rosh`",
+        inline=False
+    )
+    embed.add_field(
+        name="!glyph",
+        value="`!glyph`\nStarts a 5-minute cooldown timer for the enemy's glyph.\n**Example:** `!glyph`",
         inline=False
     )
     embed.add_field(
