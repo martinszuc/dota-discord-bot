@@ -1,5 +1,3 @@
-# bot.py
-
 import discord
 from discord.ext import commands
 import os
@@ -41,6 +39,10 @@ class SimpleHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b'Bot is running!')
 
+    def do_HEAD(self):
+        self.send_response(200)
+        self.end_headers()
+
 def run_server():
     server_address = ('0.0.0.0', 8080)
     httpd = HTTPServer(server_address, SimpleHandler)
@@ -63,49 +65,55 @@ async def on_ready():
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("❌ You are missing required arguments for this command.")
+        await ctx.send("You are missing required arguments for this command.")
         logging.warning(f"Missing arguments in command '{ctx.command}'. Context: {ctx.message.content}")
     elif isinstance(error, commands.BadArgument):
-        await ctx.send("❌ One or more arguments are invalid.")
+        await ctx.send("One or more arguments are invalid.")
         logging.warning(f"Bad arguments in command '{ctx.command}'. Context: {ctx.message.content}")
     elif isinstance(error, commands.CommandNotFound):
-        await ctx.send("❌ Command not found. Type `!bot-help` for a list of available commands.")
+        await ctx.send("Command not found. Type `!bot-help` for a list of available commands.")
         logging.warning(f"Command not found. Context: {ctx.message.content}")
     else:
-        await ctx.send("❌ An error occurred while processing the command.")
-        logging.error(f"Unhandled error in command '{ctx.command}': {error}")
+        await ctx.send("An error occurred while processing the command.")
+        logging.error(f"Unhandled error in command '{ctx.command}': {error}", exc_info=True)
 
 # Commands
 @bot.command(name="start")
-async def start(ctx, countdown: int):
-    """Start the game timer with a countdown and automatically mention players in the 'DOTA' voice channel."""
-    logging.info(f"Command '!start' invoked by {ctx.author} with countdown={countdown}")
+async def start(ctx, countdown: int, mentions: str = None):
+    """Start the game timer with a countdown and optionally mention players in the 'DOTA' voice channel."""
+    logging.info(f"Command '!start' invoked by {ctx.author} with countdown={countdown} and mentions={mentions}")
+
+    # Determine whether to mention players
+    mention_users = True if mentions and mentions.lower() == 'mention' else False
 
     # Find the "DOTA" voice channel
-    dota_channel = discord.utils.get(ctx.guild.voice_channels, name="DOTA")
+    dota_channel = discord.utils.get(ctx.guild.voice_channels, name=VOICE_CHANNEL_NAME)
     if not dota_channel:
-        await ctx.send("❌ 'DOTA' voice channel not found. Please create it and try again.")
-        logging.warning("'DOTA' voice channel not found.")
+        await ctx.send(f"'{VOICE_CHANNEL_NAME}' voice channel not found. Please create it and try again.")
+        logging.warning(f"'{VOICE_CHANNEL_NAME}' voice channel not found.")
         return
 
     # Get the list of members in the "DOTA" voice channel
     players_in_channel = [member for member in dota_channel.members if not member.bot]
     if not players_in_channel:
-        await ctx.send("❌ No players in the 'DOTA' voice channel.")
-        logging.warning("No players found in the 'DOTA' voice channel.")
+        await ctx.send(f"No players in the '{VOICE_CHANNEL_NAME}' voice channel.")
+        logging.warning(f"No players found in the '{VOICE_CHANNEL_NAME}' voice channel.")
         return
 
-    # Mention all players in the "DOTA" voice channel
-    player_mentions = ', '.join(member.mention for member in players_in_channel)
+    # Prepare player names or mentions
+    if mention_users:
+        player_names = ', '.join(member.mention for member in players_in_channel)
+    else:
+        player_names = ', '.join(member.display_name for member in players_in_channel)
 
     # Send a message in the timer channel and start the timer
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
-        await timer_channel.send(f"🕒 Starting game timer with players: {player_mentions}")
-        await game_timer.start(timer_channel, countdown, players_in_channel)
-        logging.info(f"Game timer started by {ctx.author} with countdown={countdown} and players={player_mentions}")
+        await timer_channel.send(f"Starting game timer with players: {player_names}", tts=True)
+        await game_timer.start(timer_channel, countdown, players_in_channel, mention_users)
+        logging.info(f"Game timer started by {ctx.author} with countdown={countdown} and players={player_names}")
     else:
-        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
+        await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
 @bot.command(name="stop")
@@ -116,13 +124,13 @@ async def stopgame(ctx):
         timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
         if timer_channel:
             await game_timer.stop()
-            await timer_channel.send("🛑 Game timer stopped.")
+            await timer_channel.send("Game timer stopped.", tts=True)
             logging.info(f"Game timer stopped by {ctx.author}")
         else:
-            await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
+            await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
             logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
     else:
-        await ctx.send("❌ Game timer is not currently running.")
+        await ctx.send("Game timer is not currently running.")
         logging.warning(f"{ctx.author} attempted to stop the timer, but it was not running.")
 
 @bot.command(name="rosh")
@@ -130,7 +138,7 @@ async def rosh(ctx):
     """Log Roshan's death and start the respawn timer."""
     logging.info(f"Command '!rosh' invoked by {ctx.author}")
     if not game_timer.is_running():
-        await ctx.send("❌ Game is not active.")
+        await ctx.send("Game is not active.")
         logging.warning(f"Roshan timer attempted by {ctx.author} but game is not active.")
         return
 
@@ -139,7 +147,7 @@ async def rosh(ctx):
         await roshan_timer.start(timer_channel)
         logging.info(f"Roshan timer started by {ctx.author}")
     else:
-        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
+        await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
 @bot.command(name="glyph")
@@ -148,168 +156,43 @@ async def glyph(ctx):
     logging.info(f"Command '!glyph' invoked by {ctx.author}")
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
-        await timer_channel.send("🛡️ **Enemy glyph used!** Starting 5-minute cooldown timer.")
+        await timer_channel.send("Enemy glyph used! Starting 5-minute cooldown timer.", tts=True)
         await game_timer.start_glyph_timer(timer_channel)
         logging.info(f"Glyph timer started by {ctx.author}")
     else:
-        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
+        await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
-@bot.command(name="add-event")
-async def add_static_event(ctx, time: str, message: str, target_group: str):
-    """Add a static event."""
-    logging.info(f"Command '!add-event' invoked by {ctx.author} with time={time}, message='{message}', target_group='{target_group}'")
-    timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
-    if timer_channel:
-        try:
-            event_id = game_timer.add_event(time, message, target_group)
-            await timer_channel.send(f"✅ Added static event '{message}' with ID `{event_id}` at {time} for `{target_group}`.")
-            logging.info(f"Static event added by {ctx.author}: ID={event_id}, time={time}, message='{message}', target_group='{target_group}'")
-        except ValueError as ve:
-            await ctx.send(f"❌ {ve}")
-            logging.error(f"Error adding static event: {ve}")
-    else:
-        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
-        logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
-
-@bot.command(name="add-periodic")
-async def add_periodic_event(ctx, start_time: str, interval: str, end_time: str, message: str, target_group: str):
-    """Add a periodic event."""
-    logging.info(f"Command '!add-periodic' invoked by {ctx.author} with start_time={start_time}, interval={interval}, end_time={end_time}, message='{message}', target_group='{target_group}'")
-    timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
-    if timer_channel:
-        try:
-            event_id = game_timer.add_custom_event(start_time, interval, end_time, message, [target_group])
-            await timer_channel.send(
-                f"✅ Added periodic event '{message}' with ID `{event_id}` every `{interval}`, from `{start_time}` to `{end_time}`, for `{target_group}`."
-            )
-            logging.info(f"Periodic event added by {ctx.author}: ID={event_id}, start_time={start_time}, interval={interval}, end_time={end_time}, message='{message}', target_group='{target_group}'")
-        except ValueError as ve:
-            await ctx.send(f"❌ {ve}")
-            logging.error(f"Error adding periodic event: {ve}")
-    else:
-        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
-        logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
-
-@bot.command(name="remove-event")
-async def remove_event(ctx, event_id: int):
-    """Remove an event by its unique ID."""
-    logging.info(f"Command '!remove-event' invoked by {ctx.author} with event_id={event_id}")
-    timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
-    if timer_channel:
-        # First, attempt to remove from static EVENTS
-        if event_id in STATIC_EVENTS:
-            del STATIC_EVENTS[event_id]
-            await timer_channel.send(f"✅ Removed static event ID `{event_id}`.")
-            logging.info(f"Static event ID {event_id} removed by {ctx.author}")
-            return
-
-        # Next, attempt to remove from custom_events
-        removed = game_timer.remove_custom_event(event_id)
-        if removed:
-            await timer_channel.send(f"✅ Removed custom event ID `{event_id}`.")
-            logging.info(f"Custom event ID {event_id} removed by {ctx.author}")
-        else:
-            await ctx.send(f"❌ Event with ID `{event_id}` not found.")
-            logging.warning(f"Attempted to remove non-existent event ID {event_id} by {ctx.author}")
-    else:
-        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
-        logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
-
-@bot.command(name="list")
-async def list_events(ctx):
-    """List all currently set events."""
-    logging.info(f"Command '!list' invoked by {ctx.author}")
-    timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
-    if timer_channel:
-        messages = []
-
-        # List static events
-        for event_id, event in STATIC_EVENTS.items():
-            messages.append(f"🟢 **Static Event** | ID: `{event_id}` | Time: `{event['time']}` | Message: {event['message']} | Targets: `{', '.join(event['target_groups'])}`")
-
-        # List predefined periodic events
-        for event_id, event in PERIODIC_EVENTS.items():
-            messages.append(f"🔄 **Predefined Periodic Event** | ID: `{event_id}` | Start: `{event['start_time']}` | Interval: `{event['interval']}` | End: `{event['end_time']}` | Message: {event['message']} | Targets: `{', '.join(event['target_groups'])}`")
-
-        # List custom events
-        custom_events = game_timer.get_custom_events()
-        for event_id, event in custom_events.items():
-            start_time_formatted = f"{event['start_time'] // 60:02}:{event['start_time'] % 60:02}"
-            end_time_formatted = f"{event['end_time'] // 60:02}:{event['end_time'] % 60:02}"
-            interval_formatted = f"{event['interval'] // 60:02}:{event['interval'] % 60:02}"
-            messages.append(f"🔁 **Custom Periodic Event** | ID: `{event_id}` | Start: `{start_time_formatted}` | Interval: `{interval_formatted}` | End: `{end_time_formatted}` | Message: {event['message']} | Targets: `{', '.join(event['target_groups'])}`")
-
-        if messages:
-            embed = discord.Embed(
-                title="📜 Current Events",
-                description="\n".join(messages),
-                color=0x00ff00
-            )
-            await timer_channel.send(embed=embed)
-            logging.info(f"Listed events for {ctx.author}")
-        else:
-            await timer_channel.send("ℹ️ No events set.")
-            logging.info(f"No events to list for {ctx.author}")
-    else:
-        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
-        logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
+# You can adjust or remove the following commands if you're not using target groups anymore.
 
 @bot.command(name="bot-help")
 async def bot_help(ctx):
     """Show available commands with examples."""
     logging.info(f"Command '!bot-help' invoked by {ctx.author}")
-    embed = discord.Embed(
-        title="📜 Dota Timer Bot - Help",
-        description="Here are the available commands with examples:",
-        color=0x00ff00
-    )
-    embed.add_field(
-        name="!start",
-        value=f"`!start <countdown>`\nStarts the game timer with a countdown and the players in the '{VOICE_CHANNEL_NAME}' voice channel.\n**Example:** `!start 3`",
-        inline=False
-    )
-    embed.add_field(
-        name="!stop",
-        value="`!stop`\nStops the current game timer.\n**Example:** `!stop`",
-        inline=False
-    )
-    embed.add_field(
-        name="!rosh",
-        value="`!rosh`\nLogs Roshan's death and starts an 8-minute respawn timer.\n**Example:** `!rosh`",
-        inline=False
-    )
-    embed.add_field(
-        name="!glyph",
-        value="`!glyph`\nStarts a 5-minute cooldown timer for the enemy's glyph.\n**Example:** `!glyph`",
-        inline=False
-    )
-    embed.add_field(
-        name="!add-event",
-        value="`!add-event <time:MM:SS> <message> <target_group>`\nAdds a static event.\n**Example:** `!add-event 10:00 \"Power Rune spawned!\" mid`",
-        inline=False
-    )
-    embed.add_field(
-        name="!add-periodic",
-        value="`!add-periodic <start_time:MM:SS> <interval:MM:SS> <end_time:MM:SS> <message> <target_group>`\nAdds a periodic event.\n**Example:** `!add-periodic 06:40 02:00 40:00 \"XP runes spawning soon\" all`",
-        inline=False
-    )
-    embed.add_field(
-        name="!remove-event",
-        value="`!remove-event <event_id>`\nRemoves an event by its unique ID.\n**Example:** `!remove-event 5`",
-        inline=False
-    )
-    embed.add_field(
-        name="!list",
-        value="`!list`\nLists all currently set events.\n**Example:** `!list`",
-        inline=False
-    )
-    embed.add_field(
-        name="!bot-help",
-        value="`!bot-help`\nShows this help message.\n**Example:** `!bot-help`",
-        inline=False
-    )
-    await ctx.send(embed=embed)
+    help_message = """
+**Dota Timer Bot - Help**
+
+- `!start <countdown> [mention]`
+  - Starts the game timer with a countdown. Add 'mention' to mention players.
+  - **Example:** `!start 3` or `!start 3 mention`
+
+- `!stop`
+  - Stops the current game timer.
+  - **Example:** `!stop`
+
+- `!rosh`
+  - Logs Roshan's death and starts an 8-minute respawn timer.
+  - **Example:** `!rosh`
+
+- `!glyph`
+  - Starts a 5-minute cooldown timer for the enemy's glyph.
+  - **Example:** `!glyph`
+
+- `!bot-help`
+  - Shows this help message.
+  - **Example:** `!bot-help`
+    """
+    await ctx.send(help_message)
     logging.info(f"Help message sent to {ctx.author}")
 
 # Start the HTTP server in a separate thread

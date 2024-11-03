@@ -1,61 +1,62 @@
-# timer.py
-
 import asyncio
 import logging
 from discord.ext import tasks
 from utils import parse_time
 from events import STATIC_EVENTS, PERIODIC_EVENTS
 
-
 class GameTimer:
     """Class to manage the game timer and events."""
 
     def __init__(self):
         self.time_elapsed = 0
-        self.timer_task = None
         self.channel = None
         self.usernames = []  # List of discord.Member objects
         self.custom_events = {}
-        self.auto_stop_task = None
         self.next_event_id = max(list(STATIC_EVENTS.keys()) + list(PERIODIC_EVENTS.keys()), default=0) + 1
 
-    async def start(self, channel, countdown, usernames):
+        # Initialize loop tasks
+        self.timer_task = self._timer_task
+        self.auto_stop_task = self._auto_stop_task
+        self.mention_users = False
+
+    async def start(self, channel, countdown, usernames, mention_users=False):
         """Start the game timer."""
         self.channel = channel
         self.time_elapsed = -countdown
         self.usernames = usernames  # These are discord.Member objects
+        self.mention_users = mention_users
         logging.info(f"Game timer started with countdown={countdown} seconds and usernames={usernames}")
 
-        if self.timer_task and self.timer_task.is_running():
+        if self.timer_task.is_running():
             self.timer_task.cancel()
             logging.info("Existing timer task canceled before starting a new one.")
-        self.timer_task = self._timer_task.start()
+        self.timer_task.start()
 
-        if self.auto_stop_task and self.auto_stop_task.is_running():
+        if self.auto_stop_task.is_running():
             self.auto_stop_task.cancel()
             logging.info("Existing auto-stop task canceled before starting a new one.")
-        self.auto_stop_task = self._auto_stop_task.start()
+        self.auto_stop_task.start()
 
     async def stop(self):
         """Stop the game timer."""
-        if self.timer_task and self.timer_task.is_running():
+        if self.timer_task.is_running():
             self.timer_task.cancel()
             logging.info("Game timer task canceled.")
-            self.timer_task = None
-        if self.auto_stop_task and self.auto_stop_task.is_running():
+        if self.auto_stop_task.is_running():
             self.auto_stop_task.cancel()
             logging.info("Auto-stop task canceled.")
         self.time_elapsed = 0
         self.custom_events.clear()
         logging.info("Game timer stopped and all custom events cleared.")
         if self.channel:
-            await self.channel.send("🛑 Game timer has been stopped and all events have been cleared.")
+            await self.channel.send("Game timer has been stopped and all events have been cleared.", tts=True)
+            self.channel = None
         else:
             logging.warning("Cannot send stop message; channel is not set.")
 
     def is_running(self):
         """Check if the timer is running."""
-        return self.timer_task is not None and self.timer_task.is_running()
+        return self.timer_task.is_running()
 
     def add_event(self, start_time, message, target_group):
         """Add a static event with a unique ID."""
@@ -128,16 +129,19 @@ class GameTimer:
         if self.time_elapsed >= 90 * 60:  # 1.5 hours in seconds
             await self.stop()
             logging.info("Game timer automatically stopped after 1.5 hours.")
-            await self.channel.send("🛑 Game timer automatically stopped after 1.5 hours.")
+            if self.channel:
+                await self.channel.send("Game timer automatically stopped after 1.5 hours.", tts=True)
 
     async def _check_static_events(self):
         """Check and trigger static events."""
         for event_id, event in STATIC_EVENTS.items():
             event_time = parse_time(event["time"])
             if self.time_elapsed == event_time:
-                mentions = " ".join(user.mention for user in self.usernames)  # Mention all users
-                await self.channel.send(f"📢 {event['message']} {mentions}")
-                logging.info(f"Static event triggered: ID={event_id}, time={event['time']}, message='{event['message']}")
+                mentions = ""
+                if self.mention_users:
+                    mentions = " " + " ".join(user.mention for user in self.usernames)
+                await self.channel.send(f"{event['message']}{mentions}", tts=True)
+                logging.info(f"Static event triggered: ID={event_id}, time={event['time']}, message='{event['message']}'")
 
     async def _check_periodic_events(self):
         """Check and trigger predefined periodic events."""
@@ -147,8 +151,10 @@ class GameTimer:
             end_seconds = parse_time(event["end_time"])
             if start_seconds <= self.time_elapsed <= end_seconds:
                 if (self.time_elapsed - start_seconds) % interval_seconds == 0:
-                    mentions = " ".join(user.mention for user in self.usernames)  # Mention all users
-                    await self.channel.send(f"🔄 {event['message']} {mentions}")
+                    mentions = ""
+                    if self.mention_users:
+                        mentions = " " + " ".join(user.mention for user in self.usernames)
+                    await self.channel.send(f"{event['message']}{mentions}", tts=True)
                     logging.info(f"Predefined periodic event triggered: ID={event_id}, message='{event['message']}', interval={event['interval']}")
 
     async def _check_custom_events(self):
@@ -159,15 +165,19 @@ class GameTimer:
             end_seconds = event["end_time"]
             if start_seconds <= self.time_elapsed <= end_seconds:
                 if (self.time_elapsed - start_seconds) % interval_seconds == 0:
-                    mentions = " ".join(user.mention for user in self.usernames)  # Mention all users
-                    await self.channel.send(f"🔁 {event['message']} {mentions}")
+                    mentions = ""
+                    if self.mention_users:
+                        mentions = " " + " ".join(user.mention for user in self.usernames)
+                    await self.channel.send(f"{event['message']}{mentions}", tts=True)
                     logging.info(f"Custom periodic event triggered: ID={event_id}, message='{event['message']}', interval={event['interval']}")
 
     async def start_glyph_timer(self, channel):
         """Start a 5-minute timer for the enemy's glyph cooldown."""
         glyph_cooldown = 5 * 60  # 5 minutes in seconds
         await asyncio.sleep(glyph_cooldown - 30)  # Notify 30 seconds before cooldown ends
-        await channel.send("🛡️ **Enemy glyph available in 30 seconds!**")
+        await channel.send("Enemy glyph available in 30 seconds!", tts=True)
         await asyncio.sleep(30)
-        await channel.send("🛡️ **Enemy glyph cooldown has ended!**")
+        await channel.send("Enemy glyph cooldown has ended!", tts=True)
         logging.info("Enemy glyph cooldown ended.")
+
+    # You can remove or adjust methods related to target groups as they're no longer used.

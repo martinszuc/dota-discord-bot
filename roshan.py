@@ -1,28 +1,38 @@
-from datetime import datetime, timedelta
-from discord.ext import tasks
+import asyncio
+import logging
 
 class RoshanTimer:
     """Class to manage Roshan's respawn timer."""
-    ROSH_RESPAWN_MSG = "RS maybe alive! worst case scenario is {}."
 
     def __init__(self):
-        self.roshan_killed_time = None
-        self.channel = None
-        self.respawn_task = None
+        self.is_active = False
 
     async def start(self, channel):
         """Start the Roshan respawn timer."""
-        self.roshan_killed_time = datetime.now()
-        self.channel = channel
-        if self.respawn_task and self.respawn_task.is_running():
-            self.respawn_task.cancel()
-        self.respawn_task = self._respawn_task.start()
+        if self.is_active:
+            await channel.send("Roshan timer is already active.", tts=True)
+            logging.warning("Roshan timer is already active.")
+            return
 
-    @tasks.loop(seconds=1)
-    async def _respawn_task(self):
-        """Timer loop for Roshan's respawn."""
-        respawn_time = self.roshan_killed_time + timedelta(minutes=8)
-        latest_respawn_time = self.roshan_killed_time + timedelta(minutes=11)
-        if datetime.now() >= respawn_time:
-            await self.channel.send(self.ROSH_RESPAWN_MSG.format(latest_respawn_time.strftime("%H:%M")))
-            self.respawn_task.cancel()
+        self.is_active = True
+        await channel.send("Roshan has been killed! Starting respawn timer.", tts=True)
+        logging.info("Roshan timer started.")
+
+        # Roshan respawn time is between 8 to 11 minutes
+        min_respawn = 8 * 60  # 8 minutes in seconds
+        max_respawn = 11 * 60  # 11 minutes in seconds
+
+        # Notify at minimum respawn time
+        await asyncio.sleep(min_respawn - 60)  # Notify 1 minute before
+        await channel.send("Roshan may respawn in 1 minute!", tts=True)
+        logging.info("Roshan may respawn in 1 minute.")
+
+        await asyncio.sleep(60)
+        await channel.send("Roshan may have respawned!", tts=True)
+        logging.info("Roshan may have respawned.")
+
+        # Notify at maximum respawn time
+        await asyncio.sleep(max_respawn - min_respawn)
+        await channel.send("Roshan has definitely respawned!", tts=True)
+        logging.info("Roshan has definitely respawned.")
+        self.is_active = False
