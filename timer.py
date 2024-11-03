@@ -221,7 +221,7 @@ class GameTimer:
                 clean_message = re.sub(r'[\*\_\~\`]', '', message)
 
                 # Generate speech audio from message using edge_tts
-                voice = "en-US-AriaNeural"  # Example of a female voice
+                voice = "en-US-AmberNeural"  # Choose the voice you prefer
                 output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
                 communicate = edge_tts.Communicate(text=clean_message, voice=voice)
                 await communicate.save(output_file.name)
