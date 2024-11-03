@@ -48,7 +48,10 @@ class GameTimer:
         self.time_elapsed = 0
         self.custom_events.clear()
         logging.info("Game timer stopped and all custom events cleared.")
-        await self.channel.send("🛑 Game timer has been stopped and all events have been cleared.")
+        if self.channel:
+            await self.channel.send("🛑 Game timer has been stopped and all events have been cleared.")
+        else:
+            logging.warning("Cannot send stop message; channel is not set.")
 
     def is_running(self):
         """Check if the timer is running."""

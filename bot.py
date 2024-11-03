@@ -112,14 +112,18 @@ async def start(ctx, countdown: int):
 async def stopgame(ctx):
     """Stop the game timer."""
     logging.info(f"Command '!stop' invoked by {ctx.author}")
-    timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
-    if timer_channel:
-        await game_timer.stop()
-        await timer_channel.send("🛑 Game timer stopped.")
-        logging.info(f"Game timer stopped by {ctx.author}")
+    if game_timer.is_running():
+        timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
+        if timer_channel:
+            await game_timer.stop()
+            await timer_channel.send("🛑 Game timer stopped.")
+            logging.info(f"Game timer stopped by {ctx.author}")
+        else:
+            await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
+            logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
     else:
-        await ctx.send(f"❌ Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
-        logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
+        await ctx.send("❌ Game timer is not currently running.")
+        logging.warning(f"{ctx.author} attempted to stop the timer, but it was not running.")
 
 @bot.command(name="rosh")
 async def rosh(ctx):
