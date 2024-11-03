@@ -7,7 +7,7 @@ def parse_time(time_str):
 
 def mention_players(target_groups, usernames):
     """Generate mentions for target player groups."""
-    # Map player positions to usernames
+    # Map player positions to discord.Member objects
     position_map = {
         "safe": [usernames[0], usernames[4]],
         "mid": [usernames[1]],
@@ -27,5 +27,6 @@ def mention_players(target_groups, usernames):
     for group in target_groups:
         mentioned_users.update(position_map.get(group, []))
 
-    mentions = [f"@{user}" for user in mentioned_users]
+    # Use the 'mention' attribute for proper mentions
+    mentions = [user.mention for user in mentioned_users]
     return " ".join(mentions) if mentions else ""
