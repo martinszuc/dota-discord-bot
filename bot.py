@@ -32,6 +32,7 @@ roshan_timer = RoshanTimer()
 
 # Constants
 TIMER_CHANNEL_NAME = "timer-bot"
+VOICE_CHANNEL_NAME = "DOTA"  # Name of the voice channel to monitor
 
 # HTTP server to keep bot alive
 class SimpleHandler(BaseHTTPRequestHandler):
@@ -76,12 +77,22 @@ async def on_command_error(ctx, error):
 
 # Commands
 @bot.command(name="start")
-async def start(ctx, countdown: int, *usernames: discord.Member):
-    """Start the game timer with a countdown and player usernames."""
-    logging.info(f"Command '!start' invoked by {ctx.author} with countdown={countdown} and usernames={usernames}")
+async def start(ctx, countdown: int):
+    """Start the game timer with a countdown and players in the DOTA voice channel."""
+    logging.info(f"Command '!start' invoked by {ctx.author} with countdown={countdown}")
+
+    # Find the voice channel named 'DOTA'
+    voice_channel = discord.utils.get(ctx.guild.voice_channels, name=VOICE_CHANNEL_NAME)
+    if not voice_channel:
+        await ctx.send(f"❌ Voice channel '{VOICE_CHANNEL_NAME}' not found.")
+        logging.error(f"Voice channel '{VOICE_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
+        return
+
+    # Get the list of members in the voice channel
+    usernames = voice_channel.members
     if len(usernames) != 5:
-        await ctx.send("❌ Please provide exactly 5 usernames.")
-        logging.warning(f"Incorrect number of usernames provided by {ctx.author}. Provided: {len(usernames)}")
+        await ctx.send(f"❌ There must be exactly 5 players in the '{VOICE_CHANNEL_NAME}' voice channel.")
+        logging.warning(f"Incorrect number of players in '{VOICE_CHANNEL_NAME}' voice channel. Found: {len(usernames)}")
         return
 
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
@@ -249,7 +260,7 @@ async def bot_help(ctx):
     )
     embed.add_field(
         name="!start",
-        value="`!start <countdown> <username1> <username2> <username3> <username4> <username5>`\nStarts the game timer with a countdown and 5 players.\n**Example:** `!start 3 @martinlol @alice @bob @jane @john`",
+        value=f"`!start <countdown>`\nStarts the game timer with a countdown and the players in the '{VOICE_CHANNEL_NAME}' voice channel.\n**Example:** `!start 3`",
         inline=False
     )
     embed.add_field(
