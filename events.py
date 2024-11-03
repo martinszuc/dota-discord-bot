@@ -8,8 +8,8 @@ STATIC_EVENTS = {
     4: {"time": "20:00", "message": "First Tormentor has spawned!"},
     5: {"time": "02:00", "message": "Glyph will be available in 30 seconds!"},
     6: {"time": "02:30", "message": "Glyph is now available!"},
-    7: {"time": "02:30", "message": "Thomas stinks"},
-    8: {"time": "02:30", "message": "Dano je kokot!"},
+    7: {"time": "00:20", "message": "Thomas stinks"},
+    8: {"time": "00:10", "message": "Dano je kokot!"},
 }
 
 # Periodic events defined with unique IDs, start time, interval, end time, and message
