@@ -1,14 +1,13 @@
 import asyncio
 import logging
+import re
+import os
+import tempfile
+import discord
 from discord.ext import tasks
+import edge_tts
 from utils import parse_time
 from events import STATIC_EVENTS, PERIODIC_EVENTS
-import discord
-import pyttsx3
-import os
-import edge_tts
-import tempfile
-import re  # For removing markdown formatting
 
 class GameTimer:
     """Class to manage the game timer and events."""
@@ -27,10 +26,6 @@ class GameTimer:
         self.paused = False
         self.pause_condition = asyncio.Condition()
         self.voice_client = None  # Discord voice client
-
-        # Initialize TTS engine
-        self.tts_engine = pyttsx3.init()
-        self.tts_engine.setProperty('rate', 150)  # Adjust speech rate if necessary
 
     async def start(self, channel, countdown, usernames, mention_users=False):
         """Start the game timer."""
@@ -192,7 +187,7 @@ class GameTimer:
                 if (self.time_elapsed - start_seconds) % interval_seconds == 0:
                     message = event['message']
                     await self.announce_message(message)
-                    logging.info(f"Predefined periodic event triggered: ID={event_id}, message='{message}', interval={event['interval']}")
+                    logging.info(f"Predefined periodic event triggered: ID={event_id}, message='{message}', interval={event['interval']}'")
 
     async def _check_custom_events(self):
         """Check and trigger custom periodic events."""
@@ -204,32 +199,45 @@ class GameTimer:
                 if (self.time_elapsed - start_seconds) % interval_seconds == 0:
                     message = event['message']
                     await self.announce_message(message)
-                    logging.info(f"Custom periodic event triggered: ID={event_id}, message='{message}', interval={event['interval']}")
+                    logging.info(f"Custom periodic event triggered: ID={event_id}, message='{message}', interval={event['interval']}'")
 
     async def announce_message(self, message):
         """Announce a message in the voice channel."""
         # Send message in text channel
         if self.channel:
             await self.channel.send(message)
+            logging.info(f"Sent message to text channel: {message}")
         else:
-            logging.warning("Cannot send message; channel is not set.")
+            logging.warning("Cannot send message; text channel is not set.")
 
         # Announce message in voice channel
         if self.voice_client and self.voice_client.is_connected():
             try:
-                # Remove markdown formatting from the message
-                clean_message = re.sub(r'[\*\_\~\`]', '', message)
+                # Remove unwanted symbols from the message
+                clean_message = re.sub(r'[^\w\s]', '', message)
+                clean_message = re.sub(r'\s+', ' ', clean_message).strip()
+                logging.info(f"Cleaned message for TTS: '{clean_message}'")
+
+                if not clean_message:
+                    logging.warning("Cleaned message is empty. Skipping TTS announcement.")
+                    return
+
+                # Select the desired voice
+                voice = "en-US-AmberNeural"  # Change this to your preferred voice
+                logging.info(f"Using voice: {voice}")
 
                 # Generate speech audio from message using edge_tts
-                voice = "en-US-AriaNeural"  # Example of a female voice
                 output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
                 communicate = edge_tts.Communicate(text=clean_message, voice=voice)
+                logging.info(f"Generating TTS audio for message: '{clean_message}'")
                 await communicate.save(output_file.name)
+                logging.info(f"Saved TTS audio to {output_file.name}")
 
                 # Play the audio in the voice channel
                 audio_source = discord.FFmpegPCMAudio(output_file.name)
                 if not self.voice_client.is_playing():
                     self.voice_client.play(audio_source)
+                    logging.info("Started playing audio in voice channel.")
                 else:
                     logging.warning("Voice client is already playing audio.")
 
@@ -240,7 +248,21 @@ class GameTimer:
                 # Clean up temporary audio file
                 output_file.close()
                 os.unlink(output_file.name)
+                logging.info("Finished playing audio and cleaned up temporary file.")
             except Exception as e:
                 logging.error(f"Error during voice announcement: {e}", exc_info=True)
         else:
             logging.warning("Voice client is not connected; cannot announce message.")
+
+    async def start_glyph_timer(self, channel):
+        """Start a 5-minute timer for the enemy's glyph cooldown."""
+        glyph_cooldown = 5 * 60  # 5 minutes in seconds
+        await asyncio.sleep(glyph_cooldown - 30)  # Notify 30 seconds before cooldown ends
+        message = "Enemy glyph available in 30 seconds!"
+        await channel.send(message)
+        await self.announce_message(message)
+        await asyncio.sleep(30)
+        message = "Enemy glyph cooldown has ended!"
+        await channel.send(message)
+        await self.announce_message(message)
+        logging.info("Enemy glyph cooldown ended.")
