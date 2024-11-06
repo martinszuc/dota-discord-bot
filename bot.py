@@ -194,6 +194,7 @@ async def rosh(ctx):
         logging.warning(f"Roshan timer attempted by {ctx.author} but game is not active.")
         return
 
+    # Retrieve or create the timer channel
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
         await roshan_timer.start(timer_channel)
@@ -201,6 +202,7 @@ async def rosh(ctx):
     else:
         await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
+
 
 @bot.command(name="glyph")
 async def glyph(ctx):
