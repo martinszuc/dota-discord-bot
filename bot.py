@@ -1,14 +1,18 @@
+# bot.py
+
 import discord
 from discord.ext import commands
 import os
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from timer import GameTimer
-from roshan import RoshanTimer
-from events import STATIC_EVENTS, PERIODIC_EVENTS
 import logging
 import ctypes.util
+from timer import GameTimer
+from roshan import RoshanTimer
+from events import EventsManager
+from utils import parse_time
 
+# Load opus library
 opus_lib = ctypes.util.find_library('opus')
 discord.opus.load_opus(opus_lib)
 
@@ -30,8 +34,9 @@ intents.voice_states = True  # Enable voice states
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
 # Instantiate timers
+events_manager = EventsManager()
 game_timer = GameTimer()
-roshan_timer = RoshanTimer()
+roshan_timer = RoshanTimer(game_timer)
 
 # Constants
 TIMER_CHANNEL_NAME = "timer-bot"
@@ -76,7 +81,7 @@ async def on_command_error(ctx, error):
         await ctx.send("One or more arguments are invalid.")
         logging.warning(f"Bad arguments in command '{ctx.command}'. Context: {ctx.message.content}")
     elif isinstance(error, commands.CommandNotFound):
-        await ctx.send("Command not found. Type `!bot-help` for a list of available commands.")
+        await ctx.send("Command not found. Type !bot-help for a list of available commands.")
         logging.warning(f"Command not found. Context: {ctx.message.content}")
     else:
         await ctx.send("An error occurred while processing the command.")
@@ -84,21 +89,31 @@ async def on_command_error(ctx, error):
 
 # Commands
 @bot.command(name="start")
-async def start(ctx, countdown: int, mentions: str = None):
-    """Start the game timer with a countdown and optionally mention players in the 'DOTA' voice channel."""
-    logging.info(f"Command '!start' invoked by {ctx.author} with countdown={countdown} and mentions={mentions}")
+async def start(ctx, countdown: int, *args):
+    """Start the game timer with a countdown and optionally specify mode and mentions."""
+    logging.info(f"Command '!start' invoked by {ctx.author} with countdown={countdown} and args={args}")
+
+    mode = 'regular'
+    mentions = None
+
+    # Parse args
+    for arg in args:
+        if arg.lower() in ['regular', 'turbo']:
+            mode = arg.lower()
+        elif arg.lower() == 'mention':
+            mentions = 'mention'
 
     # Determine whether to mention players
     mention_users = True if mentions and mentions.lower() == 'mention' else False
 
-    # Find the "DOTA" voice channel
+    # Find the voice channel
     dota_channel = discord.utils.get(ctx.guild.voice_channels, name=VOICE_CHANNEL_NAME)
     if not dota_channel:
         await ctx.send(f"'{VOICE_CHANNEL_NAME}' voice channel not found. Please create it and try again.")
         logging.warning(f"'{VOICE_CHANNEL_NAME}' voice channel not found.")
         return
 
-    # Get the list of members in the "DOTA" voice channel
+    # Get the list of members in the voice channel
     players_in_channel = [member for member in dota_channel.members if not member.bot]
     if not players_in_channel:
         await ctx.send(f"No players in the '{VOICE_CHANNEL_NAME}' voice channel.")
@@ -114,9 +129,9 @@ async def start(ctx, countdown: int, mentions: str = None):
     # Send a message in the timer channel and start the timer
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
-        await timer_channel.send(f"Starting game timer with players: {player_names}")
-        await game_timer.start(timer_channel, countdown, players_in_channel, mention_users)
-        logging.info(f"Game timer started by {ctx.author} with countdown={countdown} and players={player_names}")
+        await timer_channel.send(f"Starting {mode} game timer with players: {player_names}")
+        await game_timer.start(timer_channel, countdown, players_in_channel, mention_users, mode=mode)
+        logging.info(f"Game timer started by {ctx.author} with countdown={countdown}, mode={mode}, and players={player_names}")
     else:
         await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
@@ -203,11 +218,15 @@ async def rosh(ctx):
         await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
         logging.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
-
 @bot.command(name="glyph")
 async def glyph(ctx):
     """Start a 5-minute timer for the enemy's glyph cooldown."""
     logging.info(f"Command '!glyph' invoked by {ctx.author}")
+    if not game_timer.is_running():
+        await ctx.send("Game is not active.")
+        logging.warning(f"Glyph timer attempted by {ctx.author} but game is not active.")
+        return
+
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
         await timer_channel.send("Enemy glyph used! Starting 5-minute cooldown timer.", tts=True)
@@ -224,33 +243,34 @@ async def bot_help(ctx):
     help_message = """
 **Dota Timer Bot - Help**
 
-- `!start <countdown> [mention]`
+- !start <countdown> [mode] [mention]
   - Starts the game timer with a countdown. Add 'mention' to mention players.
-  - **Example:** `!start 3` or `!start 3 mention`
+  - **mode** can be 'regular' or 'turbo'. Defaults to 'regular'.
+  - **Example:** !start 3 or !start 3 turbo mention
 
-- `!stop`
+- !stop
   - Stops the current game timer.
-  - **Example:** `!stop`
+  - **Example:** !stop
 
-- `!pause`
+- !pause
   - Pauses the game timer and all events.
-  - **Example:** `!pause`
+  - **Example:** !pause
 
-- `!unpause`
+- !unpause
   - Resumes the game timer and all events.
-  - **Example:** `!unpause`
+  - **Example:** !unpause
 
-- `!rosh`
+- !rosh
   - Logs Roshan's death and starts an 8-minute respawn timer.
-  - **Example:** `!rosh`
+  - **Example:** !rosh
 
-- `!glyph`
+- !glyph
   - Starts a 5-minute cooldown timer for the enemy's glyph.
-  - **Example:** `!glyph`
+  - **Example:** !glyph
 
-- `!bot-help`
+- !bot-help
   - Shows this help message.
-  - **Example:** `!bot-help`
+  - **Example:** !bot-help
     """
     await ctx.send(help_message)
     logging.info(f"Help message sent to {ctx.author}")

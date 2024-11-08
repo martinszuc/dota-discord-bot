@@ -9,7 +9,7 @@ import discord
 from discord.ext import tasks
 import edge_tts
 from utils import parse_time
-from events import STATIC_EVENTS, PERIODIC_EVENTS
+from events import EventsManager
 
 class GameTimer:
     """Class to manage the game timer and events."""
@@ -19,24 +19,33 @@ class GameTimer:
         self.channel = None
         self.usernames = []  # List of discord.Member objects
         self.custom_events = {}
-        self.next_event_id = max(list(STATIC_EVENTS.keys()) + list(PERIODIC_EVENTS.keys()), default=0) + 1
+        self.next_event_id = 1
+        self.static_events = {}
+        self.periodic_events = {}
+        self.mode = 'regular'
+        self.paused = False
+        self.pause_condition = asyncio.Condition()
+        self.voice_client = None  # Discord voice client
 
         # Initialize loop tasks
         self.timer_task = self._timer_task
         self.auto_stop_task = self._auto_stop_task
         self.mention_users = False
-        self.paused = False
-        self.pause_condition = asyncio.Condition()
-        self.voice_client = None  # Discord voice client
 
-    async def start(self, channel, countdown, usernames, mention_users=False):
+    async def start(self, channel, countdown, usernames, mention_users=False, mode='regular'):
         """Start the game timer."""
         self.channel = channel
         self.time_elapsed = -countdown
         self.usernames = usernames  # These are discord.Member objects
         self.mention_users = mention_users
         self.paused = False
-        logging.info(f"Game timer started with countdown={countdown} seconds and usernames={usernames}")
+        self.mode = mode.lower()
+        logging.info(f"Game timer started with countdown={countdown} seconds and usernames={usernames} in mode={mode}")
+
+        # Load events based on mode
+        events_manager = EventsManager()
+        self.static_events = events_manager.get_static_events(self.mode)
+        self.periodic_events = events_manager.get_periodic_events(self.mode)
 
         # Start the timer task if not already running
         if not self.timer_task.is_running():
@@ -94,22 +103,21 @@ class GameTimer:
         """Check if the timer is paused."""
         return self.paused
 
-    def add_event(self, start_time, message, target_group):
+    def add_event(self, start_time, message):
         """Add a static event with a unique ID."""
         event_time = parse_time(start_time)
-        # Check for duplicate event times in STATIC_EVENTS
-        for event in STATIC_EVENTS.values():
+        # Check for duplicate event times in self.static_events
+        for event in self.static_events.values():
             if event["time"] == start_time and event["message"] == message:
                 raise ValueError(f"❌ An event with message '{message}' at time '{start_time}' already exists.")
         # Assign a unique ID
         event_id = self.next_event_id
-        STATIC_EVENTS[event_id] = {"time": start_time, "message": message, "target_groups": [target_group]}
+        self.static_events[event_id] = {"time": start_time, "message": message}
         self.next_event_id += 1
-        logging.info(
-            f"Static event added: ID={event_id}, time={start_time}, message='{message}', target_group='{target_group}'")
+        logging.info(f"Static event added: ID={event_id}, time={start_time}, message='{message}'")
         return event_id
 
-    def add_custom_event(self, start_time, interval, end_time, message, target_groups):
+    def add_custom_event(self, start_time, interval, end_time, message):
         """Add a custom periodic event with a unique ID."""
         start_seconds = parse_time(start_time)
         interval_seconds = parse_time(interval)
@@ -125,12 +133,10 @@ class GameTimer:
             "start_time": start_seconds,
             "interval": interval_seconds,
             "end_time": end_seconds,
-            "message": message,
-            "target_groups": target_groups
+            "message": message
         }
         self.next_event_id += 1
-        logging.info(
-            f"Custom periodic event added: ID={event_id}, start_time={start_time}, interval={interval}, end_time={end_time}, message='{message}', target_groups={target_groups}")
+        logging.info(f"Custom periodic event added: ID={event_id}, start_time={start_time}, interval={interval}, end_time={end_time}, message='{message}'")
         return event_id
 
     def remove_custom_event(self, event_id):
@@ -175,7 +181,7 @@ class GameTimer:
 
     async def _check_static_events(self):
         """Check and trigger static events."""
-        for event_id, event in STATIC_EVENTS.items():
+        for event_id, event in self.static_events.items():
             event_time = parse_time(event["time"])
             if self.time_elapsed == event_time:
                 message = event['message']
@@ -184,7 +190,7 @@ class GameTimer:
 
     async def _check_periodic_events(self):
         """Check and trigger predefined periodic events."""
-        for event_id, event in PERIODIC_EVENTS.items():
+        for event_id, event in self.periodic_events.items():
             start_seconds = parse_time(event["start_time"])
             interval_seconds = parse_time(event["interval"])
             end_seconds = parse_time(event["end_time"])
@@ -228,7 +234,7 @@ class GameTimer:
                     return
 
                 # Select the desired voice
-                voice = "en-US-AriaNeural"  # Change this based on `list_voices.py` output
+                voice = "en-US-AriaNeural"  # Change this based on list_voices.py output
                 logging.info(f"Using voice: {voice}")
 
                 # Generate speech audio from message using edge_tts

@@ -1,3 +1,5 @@
+# utils.py
+
 def parse_time(time_str):
     """Convert time in 'mm:ss' format or seconds to total seconds."""
     if ":" in time_str:
