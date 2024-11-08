@@ -11,87 +11,87 @@ import edge_tts
 from utils import parse_time
 from events import EventsManager
 
+logger = logging.getLogger(__name__)
+
 class GameTimer:
     """Class to manage the game timer and events."""
 
-    def __init__(self):
+    def __init__(self, guild_id, mode='regular'):
+        self.guild_id = guild_id
+        self.mode = mode
         self.time_elapsed = 0
         self.channel = None
-        self.usernames = []  # List of discord.Member objects
+        self.usernames = []
         self.custom_events = {}
-        self.next_event_id = 1
-        self.static_events = {}
-        self.periodic_events = {}
-        self.mode = 'regular'
         self.paused = False
         self.pause_condition = asyncio.Condition()
-        self.voice_client = None  # Discord voice client
+        self.voice_client = None
 
-        # Initialize loop tasks
         self.timer_task = self._timer_task
         self.auto_stop_task = self._auto_stop_task
         self.mention_users = False
 
-    async def start(self, channel, countdown, usernames, mention_users=False, mode='regular'):
+        self.static_events = {}
+        self.periodic_events = {}
+
+    async def start(self, channel, countdown, usernames, mention_users=False):
         """Start the game timer."""
         self.channel = channel
         self.time_elapsed = -countdown
-        self.usernames = usernames  # These are discord.Member objects
+        self.usernames = usernames
         self.mention_users = mention_users
         self.paused = False
-        self.mode = mode.lower()
-        logging.info(f"Game timer started with countdown={countdown} seconds and usernames={usernames} in mode={mode}")
+        logger.info(f"Game timer started with countdown={countdown} seconds and usernames={usernames} in mode={self.mode}")
 
-        # Load events based on mode
+        # Load events from database
         events_manager = EventsManager()
-        self.static_events = events_manager.get_static_events(self.mode)
-        self.periodic_events = events_manager.get_periodic_events(self.mode)
+        self.static_events, self.periodic_events = events_manager.get_events(self.guild_id, self.mode)
+        events_manager.close()
 
         # Start the timer task if not already running
         if not self.timer_task.is_running():
             self.timer_task.start()
-            logging.info("Timer task started.")
+            logger.info("Timer task started.")
 
         # Start the auto-stop task if not already running
         if not self.auto_stop_task.is_running():
             self.auto_stop_task.start()
-            logging.info("Auto-stop task started.")
+            logger.info("Auto-stop task started.")
 
     async def stop(self):
         """Stop the game timer."""
         if self.timer_task.is_running():
             self.timer_task.cancel()
-            logging.info("Timer task canceled.")
+            logger.info("Timer task canceled.")
         if self.auto_stop_task.is_running():
             self.auto_stop_task.cancel()
-            logging.info("Auto-stop task canceled.")
+            logger.info("Auto-stop task canceled.")
 
         self.time_elapsed = 0
-        self.custom_events.clear()
         self.paused = False
-        logging.info("Game timer stopped and all custom events cleared.")
+        logger.info("Game timer stopped.")
 
         if self.channel:
-            await self.channel.send("Game timer has been stopped and all events have been cleared.")
+            await self.channel.send("Game timer has been stopped and all events have been cleared.", tts=True)
             self.channel = None
         else:
-            logging.warning("Cannot send stop message; channel is not set.")
+            logger.warning("Cannot send stop message; channel is not set.")
 
         # Disconnect voice client if connected
         if self.voice_client and self.voice_client.is_connected():
             await self.voice_client.disconnect()
             self.voice_client = None
-            logging.info("Voice client disconnected.")
+            logger.info("Voice client disconnected.")
 
     async def pause(self):
         """Pause the game timer."""
         self.paused = True
-        logging.info("Game timer paused.")
+        logger.info("Game timer paused.")
 
     async def unpause(self):
         """Unpause the game timer."""
         self.paused = False
-        logging.info("Game timer resumed.")
+        logger.info("Game timer resumed.")
         async with self.pause_condition:
             self.pause_condition.notify_all()
 
@@ -103,81 +103,30 @@ class GameTimer:
         """Check if the timer is paused."""
         return self.paused
 
-    def add_event(self, start_time, message):
-        """Add a static event with a unique ID."""
-        event_time = parse_time(start_time)
-        # Check for duplicate event times in self.static_events
-        for event in self.static_events.values():
-            if event["time"] == start_time and event["message"] == message:
-                raise ValueError(f"❌ An event with message '{message}' at time '{start_time}' already exists.")
-        # Assign a unique ID
-        event_id = self.next_event_id
-        self.static_events[event_id] = {"time": start_time, "message": message}
-        self.next_event_id += 1
-        logging.info(f"Static event added: ID={event_id}, time={start_time}, message='{message}'")
-        return event_id
-
-    def add_custom_event(self, start_time, interval, end_time, message):
-        """Add a custom periodic event with a unique ID."""
-        start_seconds = parse_time(start_time)
-        interval_seconds = parse_time(interval)
-        end_seconds = parse_time(end_time)
-
-        if interval_seconds <= 0:
-            raise ValueError("❌ Interval must be greater than 0 seconds.")
-        if end_seconds <= start_seconds:
-            raise ValueError("❌ End time must be after start time.")
-
-        event_id = self.next_event_id
-        self.custom_events[event_id] = {
-            "start_time": start_seconds,
-            "interval": interval_seconds,
-            "end_time": end_seconds,
-            "message": message
-        }
-        self.next_event_id += 1
-        logging.info(f"Custom periodic event added: ID={event_id}, start_time={start_time}, interval={interval}, end_time={end_time}, message='{message}'")
-        return event_id
-
-    def remove_custom_event(self, event_id):
-        """Remove a custom periodic event by its unique ID."""
-        if event_id in self.custom_events:
-            del self.custom_events[event_id]
-            logging.info(f"Custom event ID {event_id} removed.")
-            return True
-        else:
-            logging.warning(f"Attempted to remove non-existent custom event ID {event_id}.")
-            return False
-
-    def get_custom_events(self):
-        """Get all custom periodic events."""
-        return self.custom_events
-
     @tasks.loop(seconds=1)
     async def _timer_task(self):
         """Main timer loop that checks events every second."""
         if self.paused:
-            logging.debug("Game timer is paused.")
+            logger.debug("Game timer is paused.")
             async with self.pause_condition:
                 await self.pause_condition.wait()
 
         self.time_elapsed += 1
-        logging.debug(f"Time elapsed: {self.time_elapsed} seconds")
+        logger.debug(f"Time elapsed: {self.time_elapsed} seconds")
         try:
             await self._check_static_events()
             await self._check_periodic_events()
-            await self._check_custom_events()
         except Exception as e:
-            logging.error(f"Error in _timer_task: {e}", exc_info=True)
+            logger.error(f"Error in _timer_task: {e}", exc_info=True)
 
     @tasks.loop(seconds=1)
     async def _auto_stop_task(self):
         """Automatically stop the game after 1.5 hours."""
-        if self.time_elapsed >= 90 * 60:  # 1.5 hours in seconds
+        if self.time_elapsed >= 90 * 60:
             await self.stop()
-            logging.info("Game timer automatically stopped after 1.5 hours.")
+            logger.info("Game timer automatically stopped after 1.5 hours.")
             if self.channel:
-                await self.channel.send("Game timer automatically stopped after 1.5 hours.")
+                await self.channel.send("Game timer automatically stopped after 1.5 hours.", tts=True)
 
     async def _check_static_events(self):
         """Check and trigger static events."""
@@ -186,7 +135,7 @@ class GameTimer:
             if self.time_elapsed == event_time:
                 message = event['message']
                 await self.announce_message(message)
-                logging.info(f"Static event triggered: ID={event_id}, time={event['time']}, message='{message}'")
+                logger.info(f"Static event triggered: ID={event_id}, time={event['time']}, message='{message}'")
 
     async def _check_periodic_events(self):
         """Check and trigger predefined periodic events."""
@@ -198,82 +147,65 @@ class GameTimer:
                 if (self.time_elapsed - start_seconds) % interval_seconds == 0:
                     message = event['message']
                     await self.announce_message(message)
-                    logging.info(f"Predefined periodic event triggered: ID={event_id}, message='{message}', interval={event['interval']}'")
-
-    async def _check_custom_events(self):
-        """Check and trigger custom periodic events."""
-        for event_id, event in self.custom_events.items():
-            start_seconds = event["start_time"]
-            interval_seconds = event["interval"]
-            end_seconds = event["end_time"]
-            if start_seconds <= self.time_elapsed <= end_seconds:
-                if (self.time_elapsed - start_seconds) % interval_seconds == 0:
-                    message = event['message']
-                    await self.announce_message(message)
-                    logging.info(f"Custom periodic event triggered: ID={event_id}, message='{message}', interval={event['interval']}'")
+                    logger.info(f"Periodic event triggered: ID={event_id}, message='{message}', interval={event['interval']}")
 
     async def announce_message(self, message):
         """Announce a message in the voice channel."""
-        # Send message in text channel
+        # Send message in text channel using embeds
         if self.channel:
-            await self.channel.send(message)
-            logging.info(f"Sent message to text channel: {message}")
+            embed = discord.Embed(description=message, color=0x00ff00)
+            await self.channel.send(embed=embed, tts=True)
+            logger.info(f"Sent embed message to text channel: {message}")
         else:
-            logging.warning("Cannot send message; text channel is not set.")
+            logger.warning("Cannot send message; text channel is not set.")
 
         # Announce message in voice channel
         if self.voice_client and self.voice_client.is_connected():
             try:
-                # Remove unwanted symbols from the message
                 clean_message = re.sub(r'[^\w\s]', '', message)
                 clean_message = re.sub(r'\s+', ' ', clean_message).strip()
-                logging.info(f"Cleaned message for TTS: '{clean_message}'")
+                logger.info(f"Cleaned message for TTS: '{clean_message}'")
 
                 if not clean_message:
-                    logging.warning("Cleaned message is empty. Skipping TTS announcement.")
+                    logger.warning("Cleaned message is empty. Skipping TTS announcement.")
                     return
 
-                # Select the desired voice
-                voice = "en-US-AriaNeural"  # Change this based on list_voices.py output
-                logging.info(f"Using voice: {voice}")
+                voice = "en-US-AriaNeural"
+                logger.info(f"Using voice: {voice}")
 
-                # Generate speech audio from message using edge_tts
                 output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
                 communicate = edge_tts.Communicate(text=clean_message, voice=voice)
-                logging.info(f"Generating TTS audio for message: '{clean_message}'")
+                logger.info(f"Generating TTS audio for message: '{clean_message}'")
                 await communicate.save(output_file.name)
-                logging.info(f"Saved TTS audio to {output_file.name}")
+                logger.info(f"Saved TTS audio to {output_file.name}")
 
-                # Play the audio in the voice channel
                 audio_source = discord.FFmpegPCMAudio(output_file.name)
                 if not self.voice_client.is_playing():
                     self.voice_client.play(audio_source)
-                    logging.info("Started playing audio in voice channel.")
+                    logger.info("Started playing audio in voice channel.")
                 else:
-                    logging.warning("Voice client is already playing audio.")
+                    logger.warning("Voice client is already playing audio.")
 
-                # Wait until playback is finished
                 while self.voice_client.is_playing():
                     await asyncio.sleep(0.1)
 
-                # Clean up temporary audio file
                 output_file.close()
                 os.unlink(output_file.name)
-                logging.info("Finished playing audio and cleaned up temporary file.")
+                logger.info("Finished playing audio and cleaned up temporary file.")
             except Exception as e:
-                logging.error(f"Error during voice announcement: {e}", exc_info=True)
+                logger.error(f"Error during voice announcement: {e}", exc_info=True)
         else:
-            logging.warning("Voice client is not connected; cannot announce message.")
+            logger.warning("Voice client is not connected; cannot announce message.")
 
     async def start_glyph_timer(self, channel):
         """Start a 5-minute timer for the enemy's glyph cooldown."""
-        glyph_cooldown = 5 * 60  # 5 minutes in seconds
-        await asyncio.sleep(glyph_cooldown - 30)  # Notify 30 seconds before cooldown ends
+        glyph_cooldown = 5 * 60
+        await asyncio.sleep(glyph_cooldown - 30)
         message = "Enemy glyph available in 30 seconds!"
-        await channel.send(message)
+        await channel.send(message, tts=True)
         await self.announce_message(message)
         await asyncio.sleep(30)
         message = "Enemy glyph cooldown has ended!"
-        await channel.send(message)
+        await channel.send(message, tts=True)
         await self.announce_message(message)
-        logging.info("Enemy glyph cooldown ended.")
+        logger.info("Enemy glyph cooldown ended.")

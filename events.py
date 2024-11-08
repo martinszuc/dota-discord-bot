@@ -1,49 +1,107 @@
 # events.py
 
-from utils import parse_time
+from sqlalchemy import Column, Integer, String, Boolean, create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+import yaml
+
+# Load configuration
+with open("config.yaml", "r") as file:
+    config = yaml.safe_load(file)
+
+DATABASE_URL = config.get("database_url", "sqlite:///bot.db")
+
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+
+class Event(Base):
+    __tablename__ = "events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    guild_id = Column(Integer, index=True)
+    event_type = Column(String, index=True)  # 'static' or 'periodic'
+    time = Column(String, nullable=True)
+    start_time = Column(String, nullable=True)
+    interval = Column(String, nullable=True)
+    end_time = Column(String, nullable=True)
+    message = Column(String)
+    mode = Column(String, default='regular')  # 'regular' or 'turbo'
+
+
+# Create tables
+Base.metadata.create_all(bind=engine)
+
 
 class EventsManager:
     """Class to manage events for different game modes."""
 
     def __init__(self):
-        self.events = {
-            'regular': {
-                'static': {
-                    1: {"time": "00:01", "message": "Game has started"},
-                    2: {"time": "01:30", "message": "First Flagbearer in 30 seconds!"},
-                    3: {"time": "02:00", "message": "First Flagbearer spawned!"},
-                    4: {"time": "20:00", "message": "First Tormentor has spawned!"},
-                    5: {"time": "02:30", "message": "Glyph in 30 seconds!"},
-                    6: {"time": "03:00", "message": "Glyph is now available!"},
-                },
-                'periodic': {
-                    1: {"start_time": "05:40", "interval": "02:00", "end_time": "99:00", "message": "Power Runes soon!"},
-                    2: {"start_time": "06:00", "interval": "07:00", "end_time": "99:00", "message": "XP Runes in 60 seconds!"},
-                    3: {"start_time": "19:00", "interval": "10:00", "end_time": "99:00", "message": "Tormentor in 60 seconds!"},
-                    4: {"start_time": "04:30", "interval": "05:00", "end_time": "99:00", "message": "Siege Creep in 30 seconds!"},
-                    5: {"start_time": "03:00", "interval": "03:00", "end_time": "99:00", "message": "Lotus pool coming 30 seconds!"},
+        self.session = SessionLocal()
+
+    def get_events(self, guild_id, mode='regular'):
+        """Retrieve all events for the specified guild and mode."""
+        events = self.session.query(Event).filter_by(guild_id=guild_id, mode=mode).all()
+        static_events = {}
+        periodic_events = {}
+        for event in events:
+            if event.event_type == 'static':
+                static_events[event.id] = {
+                    "time": event.time,
+                    "message": event.message
                 }
-            },
-            'turbo': {
-                'static': {
-                    1: {"time": "00:01", "message": "Turbo game has started"},
-                    # Add more turbo-specific static events if needed
-                },
-                'periodic': {
-                    1: {"start_time": "02:00", "interval": "01:00", "end_time": "99:00", "message": "Turbo Power Runes soon!"},
-                    2: {"start_time": "03:00", "interval": "04:00", "end_time": "99:00", "message": "Turbo XP Runes in 60 seconds!"},
-                    3: {"start_time": "10:00", "interval": "05:00", "end_time": "99:00", "message": "Turbo Tormentor in 60 seconds!"},
-                    4: {"start_time": "02:15", "interval": "02:30", "end_time": "99:00", "message": "Turbo Siege Creep in 30 seconds!"},
-                    5: {"start_time": "01:30", "interval": "01:30", "end_time": "99:00", "message": "Turbo Lotus pool coming 30 seconds!"},
+            elif event.event_type == 'periodic':
+                periodic_events[event.id] = {
+                    "start_time": event.start_time,
+                    "interval": event.interval,
+                    "end_time": event.end_time,
+                    "message": event.message
                 }
-            }
-        }
+        return static_events, periodic_events
 
-    def get_static_events(self, mode='regular'):
-        """Retrieve static events for the specified game mode."""
-        return self.events.get(mode, {}).get('static', {})
+    def add_static_event(self, guild_id, time, message, mode='regular'):
+        """Add a static event."""
+        new_event = Event(
+            guild_id=guild_id,
+            event_type='static',
+            time=time,
+            message=message,
+            mode=mode
+        )
+        self.session.add(new_event)
+        self.session.commit()
+        return new_event.id
 
-    def get_periodic_events(self, mode='regular'):
-        """Retrieve periodic events for the specified game mode."""
-        return self.events.get(mode, {}).get('periodic', {})
+    def add_periodic_event(self, guild_id, start_time, interval, end_time, message, mode='regular'):
+        """Add a periodic event."""
+        new_event = Event(
+            guild_id=guild_id,
+            event_type='periodic',
+            start_time=start_time,
+            interval=interval,
+            end_time=end_time,
+            message=message,
+            mode=mode
+        )
+        self.session.add(new_event)
+        self.session.commit()
+        return new_event.id
 
+    def remove_event(self, guild_id, event_id):
+        """Remove an event by ID."""
+        event = self.session.query(Event).filter_by(guild_id=guild_id, id=event_id).first()
+        if event:
+            self.session.delete(event)
+            self.session.commit()
+            return True
+        else:
+            return False
+
+    def list_events(self, guild_id, mode='regular'):
+        """List all events for a guild and mode."""
+        events = self.session.query(Event).filter_by(guild_id=guild_id, mode=mode).all()
+        return events
+
+    def close(self):
+        self.session.close()

@@ -1,16 +1,21 @@
-# Dota 2 Discord Bot
+# Dota Timer Bot
 
-A Discord bot for tracking in-game Dota 2 events and sending notifications to a dedicated channel.
+A Discord bot designed to manage game timers and events for Dota 2 matches, providing in-game event tracking, voice announcements, and more.
 
-## Running the Bot
+## Features
 
-This bot is hosted on **Repl.it** and uses **UptimeRobot** to stay online continuously.
+- **Game Timer**: Start, pause, resume, and stop game timers with customizable countdowns.
+- **Event Management**: Predefined and custom events for regular and turbo game modes.
+- **Voice Announcements**: Text-to-Speech (TTS) announcements in voice channels.
+- **Advanced Configuration**: Server-specific settings for flexibility.
+- **Database Integration**: Persistent storage of events and settings using SQLite and SQLAlchemy.
+- **Security Enhancements**: Secure token management and role-based command access.
+- **Comprehensive Help**: Detailed help commands and feedback system.
 
-### Commands
+## Setup Instructions
 
-- `!startgame [countdown] [usernames]` - Starts the game timer with specified usernames.
-- `!stopgame` - Stops the game timer.
-- `!add_event [time] [interval] [end_time] [message] [target_groups]` - Adds a periodic event.
-- `!remove_event [message]` - Removes a specified event.
+### 1. Clone the Repository
 
----
+```bash
+git clone https://github.com/yourusername/dota-timer-bot.git
+cd dota-timer-bot
