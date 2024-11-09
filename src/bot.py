@@ -38,6 +38,7 @@ game_timers = {}
 
 WEBHOOK_ID = os.getenv('WEBHOOK_ID')
 
+
 @bot.event
 async def on_message(message):
     # Log received message details for troubleshooting
@@ -53,25 +54,20 @@ async def on_message(message):
     if str(message.webhook_id) == WEBHOOK_ID and message.content.startswith(PREFIX):
         logger.info("Message is from the webhook and matches the command prefix.")
 
-        # Mock the author with all permissions and an id to avoid permission issues
-        mock_author = type('User', (object,), {
+        # Mock the author with the necessary permissions and ID
+        message.author = type('User', (object,), {
             'guild_permissions': discord.Permissions.all(),
-            'id': bot.user.id  # Setting id attribute to bot's own id for compatibility
-        })
-        message.author = mock_author
+            'id': bot.user.id,  # Use bot's ID to ensure compatibility
+            'bot': False  # Ensure it's recognized as a non-bot user
+        })()
 
-        # Attempt to process the message as a command
-        ctx = await bot.get_context(message)
-        logger.info(f"Context created for webhook message: {ctx.command}, valid: {ctx.valid}")
-
-        if ctx.valid:
-            try:
-                await bot.invoke(ctx)
-                logger.info("Webhook command invoked successfully.")
-            except Exception as e:
-                logger.error(f"Error while invoking command from webhook: {e}", exc_info=True)
-        else:
-            logger.warning("Webhook message did not create a valid command context.")
+        # Log that we are about to process the command directly
+        logger.info("Processing webhook message as a command directly.")
+        try:
+            await bot.process_commands(message)
+            logger.info("Webhook command processed successfully.")
+        except Exception as e:
+            logger.error(f"Error while processing command from webhook: {e}", exc_info=True)
 
         return
 
