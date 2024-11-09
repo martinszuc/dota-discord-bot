@@ -4,15 +4,14 @@ import asyncio
 import ctypes.util
 import os
 import signal
+
 import discord
 from discord.ext import commands
+
 from src.managers.event_manager import EventsManager
-from src.timers.roshan import RoshanTimer
-from src.timers.glyph import GlyphTimer
-from src.timers.tormentor import TormentorTimer
 from src.timer import GameTimer
-from src.utils.utils import min_to_sec
 from src.utils.config import PREFIX, TIMER_CHANNEL_NAME, VOICE_CHANNEL_NAME, logger
+from src.utils.utils import min_to_sec
 
 # Load Opus library for voice support
 opus_lib = ctypes.util.find_library('opus')
@@ -36,6 +35,17 @@ events_manager = EventsManager()
 
 # Data structures to keep track of game and child timers per guild
 game_timers = {}
+
+@bot.event
+async def on_message(message):
+    # Ignore messages sent by the bot itself
+    if message.author == bot.user:
+        return
+
+    # Process message if it starts with a command prefix
+    if message.content.startswith(PREFIX):
+        # Make sure the message is processed as a command
+        await bot.process_commands(message)
 
 # Event: Bot is ready
 @bot.event
