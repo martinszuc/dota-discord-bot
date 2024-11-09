@@ -1,17 +1,17 @@
 # timer.py
 
 import asyncio
-import os
-import re
-import tempfile
 
 import discord
-import edge_tts
 from discord.ext import tasks
 
+from .config import logger
 from .event_manager import EventsManager
 from .roshan import RoshanTimer
-from .config import logger
+from .tts_manager import TTSManager
+
+# Initialize TTSManager once at the top level of your bot
+tts_manager = TTSManager()
 
 class GameTimer:
     """Class to manage the game timer and events."""
@@ -203,39 +203,8 @@ class GameTimer:
         # Announce message in voice channel
         if self.voice_client and self.voice_client.is_connected():
             try:
-                clean_message = re.sub(r'[^\w\s]', '', message)
-                clean_message = re.sub(r'\s+', ' ', clean_message).strip()
-                logger.info(f"Cleaned message for TTS: '{clean_message}'")
-
-                if not clean_message:
-                    logger.warning("Cleaned message is empty. Skipping TTS announcement.")
-                    return
-
-                voice = "en-US-AriaNeural"
-                logger.info(f"Using voice: {voice}")
-
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as output_file:
-                    communicate = edge_tts.Communicate(text=clean_message, voice=voice)
-                    logger.info(f"Generating TTS audio for message: '{clean_message}'")
-                    await communicate.save(output_file.name)
-                    logger.info(f"Saved TTS audio to {output_file.name}")
-
-                audio_source = discord.FFmpegPCMAudio(output_file.name)
-                if not self.voice_client.is_playing():
-                    self.voice_client.play(audio_source, after=lambda e: logger.info(f"Finished playing audio: {e}") if e else None)
-                    logger.info("Started playing audio in voice channel.")
-                else:
-                    logger.warning("Voice client is already playing audio.")
-
-                # Wait until audio finishes playing
-                while self.voice_client.is_playing():
-                    await asyncio.sleep(0.1)
-
-                # Cleanup temporary file
-                os.unlink(output_file.name)
-                logger.info("Finished playing audio and cleaned up temporary file.")
+                await tts_manager.play_tts(self.voice_client, message)
             except Exception as e:
                 logger.error(f"Error during voice announcement: {e}", exc_info=True)
         else:
             logger.warning("Voice client is not connected; cannot announce message.")
-

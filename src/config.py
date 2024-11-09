@@ -22,6 +22,10 @@ TIMER_CHANNEL_NAME = CONFIG.get("timer_channel", "timer-bot")
 VOICE_CHANNEL_NAME = CONFIG.get("voice_channel", "DOTA")
 DATABASE_URL = CONFIG.get("database_url", "sqlite:///bot.db")
 
+# Directory for caching TTS audio files
+TTS_CACHE_DIR = "./tts_cache"
+os.makedirs(TTS_CACHE_DIR, exist_ok=True)
+
 # Ensure the logs directory exists
 os.makedirs(LOG_DIR, exist_ok=True)
 

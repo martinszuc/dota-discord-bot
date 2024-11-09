@@ -33,21 +33,21 @@ class RoshanTimer:
             # Warning at min_respawn - 60 seconds
             await asyncio.sleep(min_respawn - 60)
             message = "Roshan may respawn in 1 minute!"
-            await channel.send(message, tts=True)
+            await channel.send(message)
             await self.game_timer.announce_message(message)
             logger.info("Roshan may respawn in 1 minute.")
 
             # Roshan may have respawned
             await asyncio.sleep(60)
             message = "Roshan may have respawned!"
-            await channel.send(message, tts=True)
+            await channel.send(message)
             await self.game_timer.announce_message(message)
             logger.info("Roshan may have respawned.")
 
             # Definitive respawn
             await asyncio.sleep(max_respawn - min_respawn)
             message = "Roshan has definitely respawned!"
-            await channel.send(message, tts=True)
+            await channel.send(message)
             await self.game_timer.announce_message(message)
             logger.info("Roshan has definitely respawned.")
 
