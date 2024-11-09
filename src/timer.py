@@ -1,17 +1,13 @@
-# timer.py
+# src/timer.py
 
 import asyncio
-
 from discord.ext import tasks
-
-from communication import Announcement
+from communication.announcement import Announcement
 from src.utils.config import logger
 from src.managers.event_manager import EventsManager
-from .timers.glyph import GlyphTimer
-from .timers.roshan import RoshanTimer
-
-# Initialize Announcement once
-announcement_manager = Announcement()
+from src.timers.glyph import GlyphTimer
+from src.timers.roshan import RoshanTimer
+from src.timers.tormentor import TormentorTimer
 
 class GameTimer:
     """Class to manage the game timer and events."""
@@ -27,14 +23,13 @@ class GameTimer:
         self.pause_condition = asyncio.Condition()
         self.voice_client = None
 
-        self.timer_task = self._timer_task
-        self.auto_stop_task = self._auto_stop_task
-        self.mention_users = False
+        self.announcement_manager = Announcement()
+        self.events_manager = EventsManager()
 
-        self.static_events = {}
-        self.periodic_events = {}
-        self.roshan_timer = RoshanTimer(self)  # Integrate RoshanTimer here
-        self.glyph_timer = GlyphTimer(self)    # Integrate GlyphTimer here
+        # Initialize child timers
+        self.roshan_timer = RoshanTimer(self)
+        self.glyph_timer = GlyphTimer(self)
+        self.tormentor_timer = TormentorTimer(self)
 
     async def start(self, channel, countdown, usernames, mention_users=False):
         """Start the game timer."""
@@ -46,36 +41,34 @@ class GameTimer:
         logger.info(f"Game timer started with countdown={countdown} seconds and usernames={usernames} in mode={self.mode}")
 
         # Load events from database
-        events_manager = EventsManager()
-        self.static_events = events_manager.get_static_events(self.guild_id, self.mode)
-        self.periodic_events = events_manager.get_periodic_events(self.guild_id, self.mode)
-        events_manager.close()
+        self.static_events = self.events_manager.get_static_events(self.guild_id, self.mode)
+        self.periodic_events = self.events_manager.get_periodic_events(self.guild_id, self.mode)
 
-        # Start the timer task if not already running
-        if not self.timer_task.is_running():
-            self.timer_task.start()
-            logger.info("Timer task started.")
+        # Start child timers if needed
+        # (They can be started via bot commands)
 
-        # Start the auto-stop task if not already running
-        if not self.auto_stop_task.is_running():
-            self.auto_stop_task.start()
-            logger.info("Auto-stop task started.")
+        # Start the timer task
+        self.timer_task.start()
 
     async def stop(self):
-        """Stop the game timer."""
-        if self.timer_task.is_running():
-            self.timer_task.cancel()
-            logger.info("Timer task canceled.")
-        if self.auto_stop_task.is_running():
-            self.auto_stop_task.cancel()
-            logger.info("Auto-stop task canceled.")
+        """Stop the game timer and all child timers."""
+        self.timer_task.cancel()
+        self.auto_stop_task.cancel()
 
         self.time_elapsed = 0
         self.paused = False
         logger.info("Game timer stopped.")
 
         # Announce stop message
-        await announcement_manager.announce(self, "Good game! Well played everyone!")
+        await self.announcement_manager.announce(self, "Game timer stopped.")
+
+        # Stop all child timers
+        await asyncio.gather(
+            self.roshan_timer.stop(),
+            self.glyph_timer.stop(),
+            self.tormentor_timer.stop(),
+            return_exceptions=True
+        )
 
         # Disconnect voice client if connected
         if self.voice_client and self.voice_client.is_connected():
@@ -83,38 +76,42 @@ class GameTimer:
             self.voice_client = None
             logger.info("Voice client disconnected.")
 
-        # Cancel Roshan timer if active
-        if self.roshan_timer.is_active:
-            await self.roshan_timer.cancel()
-            logger.info("Roshan timer cancelled.")
-
-        # Cancel Glyph timer if active
-        if self.glyph_timer.is_active:
-            await self.glyph_timer.cancel()
-            logger.info("Glyph timer cancelled.")
-
     async def pause(self):
-        """Pause the game timer."""
+        """Pause the game timer and all child timers."""
         self.paused = True
         logger.info("Game timer paused.")
 
+        # Pause child timers
+        await asyncio.gather(
+            self.roshan_timer.pause(),
+            self.glyph_timer.pause(),
+            self.tormentor_timer.pause(),
+            return_exceptions=True
+        )
+
     async def unpause(self):
-        """Unpause the game timer."""
+        """Unpause the game timer and all child timers."""
         self.paused = False
         logger.info("Game timer resumed.")
-        async with self.pause_condition:
-            self.pause_condition.notify_all()
+
+        # Unpause child timers
+        await asyncio.gather(
+            self.roshan_timer.resume(),
+            self.glyph_timer.resume(),
+            self.tormentor_timer.resume(),
+            return_exceptions=True
+        )
 
     def is_running(self):
-        """Check if the timer is running."""
+        """Check if the game timer is running."""
         return self.timer_task.is_running()
 
     def is_paused(self):
-        """Check if the timer is paused."""
+        """Check if the game timer is paused."""
         return self.paused
 
     @tasks.loop(seconds=1)
-    async def _timer_task(self):
+    async def timer_task(self):
         """Main timer loop that checks events every second."""
         if self.paused:
             logger.debug("Game timer is paused.")
@@ -123,26 +120,27 @@ class GameTimer:
 
         self.time_elapsed += 1
         logger.debug(f"Time elapsed: {self.time_elapsed} seconds")
+
         try:
             await self._check_static_events()
             await self._check_periodic_events()
         except Exception as e:
-            logger.error(f"Error in _timer_task: {e}", exc_info=True)
+            logger.error(f"Error in timer_task: {e}", exc_info=True)
 
     @tasks.loop(seconds=1)
-    async def _auto_stop_task(self):
+    async def auto_stop_task(self):
         """Automatically stop the game after 1.5 hours."""
         if self.time_elapsed >= 90 * 60:
             await self.stop()
             logger.info("Game timer automatically stopped after 1.5 hours.")
-            await announcement_manager.announce(self, "Game timer automatically stopped after 1.5 hours.")
+            await self.announcement_manager.announce(self, "Game timer automatically stopped after 1.5 hours.")
 
     async def _check_static_events(self):
         """Check and trigger static events."""
         for event_id, event in self.static_events.items():
             if self.time_elapsed == event["time"]:
                 message = event['message']
-                await announcement_manager.announce(self, message)
+                await self.announcement_manager.announce(self, message)
                 logger.info(f"Static event triggered: ID={event_id}, time={event['time']}, message='{message}'")
 
     async def _check_periodic_events(self):
@@ -151,5 +149,9 @@ class GameTimer:
             if event["start_time"] <= self.time_elapsed <= event["end_time"]:
                 if (self.time_elapsed - event["start_time"]) % event["interval"] == 0:
                     message = event['message']
-                    await announcement_manager.announce(self, message)
+                    await self.announcement_manager.announce(self, message)
                     logger.info(f"Periodic event triggered: ID={event_id}, message='{message}', interval={event['interval']}")
+
+    def close(self):
+        """Clean up resources."""
+        self.events_manager.close()

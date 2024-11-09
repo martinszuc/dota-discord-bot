@@ -2,56 +2,30 @@
 
 import asyncio
 import logging
-from communication import Announcement
+from communication.announcement import Announcement
+from src.timers.base import BaseTimer
+from src.utils.config import logger
 
-class GlyphTimer:
+class GlyphTimer(BaseTimer):
     """Class to handle the Glyph cooldown timer."""
 
     def __init__(self, game_timer):
-        self.is_running = False  # Ensure this attribute exists
-        self.game_timer = game_timer
-        self.task = None
-        self.logger = logging.getLogger('DotaDiscordBot')
+        super().__init__(game_timer)
         self.announcement = Announcement()
 
-    async def start(self, channel):
-        """Start the Glyph cooldown timer."""
-        if self.is_running:
-            await self.announcement.announce(self.game_timer, "Glyph timer running.")
-            self.logger.warning("Attempted to start Glyph timer, but it is already running.")
-            return
-        self.is_running = True
-        await self.announcement.announce(self.game_timer, "Glyph used by enemy!")
-        self.logger.info("Glyph timer started.")
-        self.task = asyncio.create_task(self.run_timer(channel))
-
-    async def run_timer(self, channel):
-        """Run the Glyph cooldown timer."""
+    async def _run_timer(self, channel):
         try:
-            await asyncio.sleep(300)  # 5 minutes
-            if not self.is_running:
-                return
-            await self.announcement.announce(self.game_timer, "Enemy glyph available!")
-            self.logger.info("Glyph cooldown ended.")
+            await self.announcement.announce(self.game_timer, "Glyph cooldown started. 5 minutes remaining.")
+            await asyncio.sleep(5 * 60)  # 5-minute cooldown
+
+            while self.is_running:
+                await self.pause_event.wait()  # Wait if paused
+                if not self.is_running:
+                    break
+                await self.announcement.announce(self.game_timer, "Glyph is now off cooldown!")
+                break
         except asyncio.CancelledError:
-            self.logger.info("Glyph timer was cancelled.")
+            logger.info("Glyph timer cancelled.")
             await self.announcement.announce(self.game_timer, "Glyph timer cancelled.")
         finally:
             self.is_running = False
-            self.task = None
-
-    async def cancel(self):
-        """Cancel the Glyph cooldown timer."""
-        if self.is_running:
-            if self.task and not self.task.done():
-                self.task.cancel()
-                try:
-                    await self.task
-                except asyncio.CancelledError:
-                    self.logger.info("Glyph timer task was successfully cancelled.")
-            self.is_running = False
-            self.task = None
-            await self.announcement.announce(self.game_timer, "Glyph timer reset.")
-            self.logger.info("Glyph timer has been reset and is inactive.")
-        else:
-            self.logger.info("Glyph timer was not active.")

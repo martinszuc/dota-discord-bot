@@ -1,4 +1,4 @@
-# bot.py
+# src/bot.py
 
 import asyncio
 import ctypes.util
@@ -34,11 +34,8 @@ bot = commands.Bot(command_prefix=PREFIX, intents=intents, help_command=None)
 # Instantiate EventsManager
 events_manager = EventsManager()
 
-# Data structures to keep track of game, Roshan, Glyph, and Tormentor timers per guild
+# Data structures to keep track of game and child timers per guild
 game_timers = {}
-roshan_timers = {}
-glyph_timers = {}
-tormentor_timers = {}
 
 # Event: Bot is ready
 @bot.event
@@ -162,7 +159,8 @@ async def start_game(ctx, countdown: int, *args):
 
     # Initialize and start the GameTimer
     game_timer = GameTimer(guild_id, mode)
-    game_timer.timer_channel = timer_text_channel  # Set the timer_channel for announcements
+    game_timer.channel = timer_text_channel  # Set the timer_channel for announcements
+    game_timer.voice_client = None
     game_timers[guild_id] = game_timer
 
     # Connect to the voice channel
@@ -193,26 +191,8 @@ async def stop_game(ctx):
             await timer_channel.send("Game timer stopped.")
             logger.info(f"Game timer stopped by {ctx.author}")
 
-            # Cancel Roshan Timer if active
-            if guild_id in roshan_timers:
-                await roshan_timers[guild_id].cancel()
-                await timer_channel.send("Roshan timer has been cancelled.")
-                logger.info(f"Roshan timer cancelled by {ctx.author}")
-                del roshan_timers[guild_id]
-
-            # Cancel Glyph Timer if active
-            if guild_id in glyph_timers:
-                await glyph_timers[guild_id].cancel()
-                await timer_channel.send("Glyph timer has been cancelled.")
-                logger.info(f"Glyph timer cancelled by {ctx.author}")
-                del glyph_timers[guild_id]
-
-            # Cancel Tormentor Timer if active
-            if guild_id in tormentor_timers:
-                await tormentor_timers[guild_id].cancel()
-                await timer_channel.send("Tormentor timer has been cancelled.")
-                logger.info(f"Tormentor timer cancelled by {ctx.author}")
-                del tormentor_timers[guild_id]
+            # Remove the timer from the dictionary
+            del game_timers[guild_id]
         else:
             await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", tts=True)
             logger.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
@@ -278,12 +258,14 @@ async def rosh_timer_command(ctx):
 
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
-        roshan_timer = roshan_timers.get(guild_id)
-        if not roshan_timer:
-            roshan_timer = RoshanTimer(game_timers[guild_id])
-            roshan_timers[guild_id] = roshan_timer
-        await roshan_timer.start(timer_channel)
-        logger.info(f"Roshan timer started by {ctx.author}")
+        roshan_timer = game_timers[guild_id].roshan_timer
+        if not roshan_timer.is_running:
+            await roshan_timer.start(timer_channel)
+            await timer_channel.send("Roshan timer started.")
+            logger.info(f"Roshan timer started by {ctx.author}")
+        else:
+            await ctx.send("Roshan timer is already running.", tts=True)
+            logger.warning(f"{ctx.author} attempted to start Roshan timer, but it was already running.")
     else:
         await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", tts=True)
         logger.warning(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
@@ -295,14 +277,18 @@ async def cancel_rosh_command(ctx):
     logger.info(f"Command '!cancel-rosh' invoked by {ctx.author}")
     guild_id = ctx.guild.id
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
-    if guild_id in roshan_timers:
-        await roshan_timers[guild_id].cancel()
-        await timer_channel.send("Roshan timer has been cancelled.", tts=True)
-        logger.info(f"Roshan timer cancelled by {ctx.author}")
-        del roshan_timers[guild_id]
+    if guild_id in game_timers:
+        roshan_timer = game_timers[guild_id].roshan_timer
+        if roshan_timer.is_running:
+            await roshan_timer.stop()
+            await timer_channel.send("Roshan timer has been cancelled.")
+            logger.info(f"Roshan timer cancelled by {ctx.author}")
+        else:
+            await ctx.send("No active Roshan timer to cancel.", tts=True)
+            logger.warning(f"No active Roshan timer found to cancel for guild ID {guild_id}.")
     else:
-        await ctx.send("No active Roshan timer to cancel.", tts=True)
-        logger.warning(f"No active Roshan timer found to cancel for guild ID {guild_id}.")
+        await ctx.send("Game timer is not active.", tts=True)
+        logger.warning(f"{ctx.author} attempted to cancel Roshan timer, but game timer is not active.")
 
 # Command: Glyph cooldown timer
 @bot.command(name="glyph", aliases=['g'])
@@ -317,12 +303,14 @@ async def glyph_timer_command(ctx):
 
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
-        glyph_timer = glyph_timers.get(guild_id)
-        if not glyph_timer:
-            glyph_timer = GlyphTimer(game_timers[guild_id])
-            glyph_timers[guild_id] = glyph_timer
-        await glyph_timer.start(timer_channel)
-        logger.info(f"Glyph timer started by {ctx.author}")
+        glyph_timer = game_timers[guild_id].glyph_timer
+        if not glyph_timer.is_running:
+            await glyph_timer.start(timer_channel)
+            await timer_channel.send("Glyph timer started.")
+            logger.info(f"Glyph timer started by {ctx.author}")
+        else:
+            await ctx.send("Glyph timer is already running.", tts=True)
+            logger.warning(f"{ctx.author} attempted to start Glyph timer, but it was already running.")
     else:
         await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", tts=True)
         logger.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
@@ -334,14 +322,18 @@ async def cancel_glyph_command(ctx):
     logger.info(f"Command '!cancel-glyph' invoked by {ctx.author}")
     guild_id = ctx.guild.id
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
-    if guild_id in glyph_timers:
-        await glyph_timers[guild_id].cancel()
-        await timer_channel.send("Glyph timer has been cancelled.")
-        logger.info(f"Glyph timer cancelled by {ctx.author}")
-        del glyph_timers[guild_id]
+    if guild_id in game_timers:
+        glyph_timer = game_timers[guild_id].glyph_timer
+        if glyph_timer.is_running:
+            await glyph_timer.stop()
+            await timer_channel.send("Glyph timer has been cancelled.")
+            logger.info(f"Glyph timer cancelled by {ctx.author}")
+        else:
+            await ctx.send("No active Glyph timer to cancel.", tts=True)
+            logger.warning(f"No active Glyph timer found to cancel for guild ID {guild_id}.")
     else:
-        await ctx.send("No active Glyph timer to cancel.", tts=True)
-        logger.warning(f"No active Glyph timer found to cancel for guild ID {guild_id}.")
+        await ctx.send("Game timer is not active.", tts=True)
+        logger.warning(f"{ctx.author} attempted to cancel Glyph timer, but game timer is not active.")
 
 # Command: Tormentor timer
 @bot.command(name="tormentor", aliases=['tm', 'torm', 't'])
@@ -356,15 +348,37 @@ async def tormentor_timer_command(ctx):
 
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
-        tormentor_timer = tormentor_timers.get(guild_id)
-        if not tormentor_timer:
-            tormentor_timer = TormentorTimer(game_timers[guild_id])
-            tormentor_timers[guild_id] = tormentor_timer
-        await tormentor_timer.start(timer_channel)
-        logger.info(f"Tormentor timer started by {ctx.author}")
+        tormentor_timer = game_timers[guild_id].tormentor_timer
+        if not tormentor_timer.is_running:
+            await tormentor_timer.start(timer_channel)
+            await timer_channel.send("Tormentor timer started.")
+            logger.info(f"Tormentor timer started by {ctx.author}")
+        else:
+            await ctx.send("Tormentor timer is already running.", tts=True)
+            logger.warning(f"{ctx.author} attempted to start Tormentor timer, but it was already running.")
     else:
         await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", tts=True)
         logger.warning(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
+
+# Command: Cancel Tormentor timer
+@bot.command(name="cancel-torm", aliases=['ct', 'tormentorcancel'])
+async def cancel_tormentor_command(ctx):
+    """Cancel the Tormentor respawn timer."""
+    logger.info(f"Command '!cancel-torm' invoked by {ctx.author}")
+    guild_id = ctx.guild.id
+    timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
+    if guild_id in game_timers:
+        tormentor_timer = game_timers[guild_id].tormentor_timer
+        if tormentor_timer.is_running:
+            await tormentor_timer.stop()
+            await timer_channel.send("Tormentor timer has been cancelled.")
+            logger.info(f"Tormentor timer cancelled by {ctx.author}")
+        else:
+            await ctx.send("No active Tormentor timer to cancel.", tts=True)
+            logger.warning(f"No active Tormentor timer found to cancel for guild ID {guild_id}.")
+    else:
+        await ctx.send("Game timer is not active.", tts=True)
+        logger.warning(f"{ctx.author} attempted to cancel Tormentor timer, but game timer is not active.")
 
 # Command: Add custom event
 @bot.command(name="add-event")
@@ -486,21 +500,6 @@ async def shutdown():
     for guild_id, timer in game_timers.items():
         if timer.is_running():
             await timer.stop()
-
-    # Stop all Roshan timers
-    for guild_id, timer in roshan_timers.items():
-        if timer.is_running:
-            await timer.cancel()
-
-    # Stop all Glyph timers
-    for guild_id, timer in glyph_timers.items():
-        if timer.is_running:
-            await timer.cancel()
-
-    # Stop all Tormentor timers
-    for guild_id, timer in tormentor_timers.items():
-        if timer.is_running:
-            await timer.cancel()
 
     # Close the EventsManager session
     events_manager.close()
