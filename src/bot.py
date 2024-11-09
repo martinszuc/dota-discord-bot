@@ -133,27 +133,34 @@ async def load_cogs():
 # Command: Start game timer
 @bot.command(name="start")
 async def start_game(ctx, countdown: int, *args):
-    logger.info(f"Executing 'start' command with countdown={countdown} and args={args}")
+    logger.info(f"Inside start_game command: countdown={countdown}, args={args}, guild_id={ctx.guild.id}, channel={ctx.channel.name}")
 
     mode = 'regular'
     for arg in args:
         if arg.lower() in ['regular', 'turbo']:
             mode = arg.lower()
+    logger.info(f"Game mode set to {mode}.")
 
     guild_id = ctx.guild.id
 
     # Check if a timer is already running for this guild
-    if guild_id in game_timers and game_timers[guild_id].is_running():
-        await ctx.send("A game timer is already running in this server.", tts=True)
-        logger.info("A game timer is already running; start command ignored.")
-        return
+    if guild_id in game_timers:
+        if game_timers[guild_id].is_running():
+            await ctx.send("A game timer is already running in this server.", tts=True)
+            logger.info("A game timer is already running; start command ignored.")
+            return
+        else:
+            logger.info("Previous game timer found but not running; proceeding to start a new one.")
+    else:
+        logger.info("No previous game timer found for this guild; proceeding to create a new timer.")
 
     # Find the voice channel
     dota_voice_channel = discord.utils.get(ctx.guild.voice_channels, name=VOICE_CHANNEL_NAME)
     if not dota_voice_channel:
         await ctx.send(f"'{VOICE_CHANNEL_NAME}' voice channel not found. Please create it and try again.", tts=True)
-        logger.warning(f"'{VOICE_CHANNEL_NAME}' voice channel not found.")
+        logger.warning(f"'{VOICE_CHANNEL_NAME}' voice channel not found in guild '{ctx.guild.name}'.")
         return
+    logger.info(f"Found voice channel '{VOICE_CHANNEL_NAME}'.")
 
     # Get the timer text channel
     timer_text_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
@@ -161,27 +168,43 @@ async def start_game(ctx, countdown: int, *args):
         await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", tts=True)
         logger.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
         return
+    logger.info(f"Found text channel '{TIMER_CHANNEL_NAME}'.")
 
     # Announce the start of the game timer
     await timer_text_channel.send(f"Starting {mode} game timer.")
-    logger.info(f"Starting game timer with mode={mode}.")
+    logger.info(f"Starting game timer announcement sent to {timer_text_channel.name}.")
 
     # Initialize and start the GameTimer
     game_timer = GameTimer(guild_id, mode)
     game_timer.channel = timer_text_channel
     game_timers[guild_id] = game_timer
+    logger.info(f"GameTimer instance created for guild {guild_id} with mode {mode}.")
 
     # Connect to the voice channel
     voice_client = discord.utils.get(bot.voice_clients, guild=ctx.guild)
     if voice_client is None:
-        voice_client = await dota_voice_channel.connect()
+        logger.info("No existing voice client found. Attempting to connect to voice channel.")
+        try:
+            voice_client = await dota_voice_channel.connect()
+            logger.info(f"Connected to voice channel '{VOICE_CHANNEL_NAME}'.")
+        except Exception as e:
+            logger.error(f"Failed to connect to voice channel '{VOICE_CHANNEL_NAME}': {e}")
+            await ctx.send("Failed to connect to voice channel. Please check permissions.", tts=True)
+            return
     elif voice_client.channel != dota_voice_channel:
+        logger.info("Moving existing voice client to the correct channel.")
         await voice_client.move_to(dota_voice_channel)
+        logger.info(f"Moved voice client to voice channel '{VOICE_CHANNEL_NAME}'.")
     game_timer.voice_client = voice_client
 
     # Start the game timer
-    await game_timer.start(timer_text_channel, countdown)
-    logger.info(f"Game timer successfully started by {ctx.author} with countdown={countdown} and mode={mode}.")
+    try:
+        await game_timer.start(timer_text_channel, countdown)
+        logger.info(f"Game timer successfully started by {ctx.author} with countdown={countdown} and mode={mode}.")
+    except Exception as e:
+        logger.error(f"Failed to start the game timer: {e}", exc_info=True)
+        await ctx.send("Failed to start the game timer due to an internal error.", tts=True)
+
 
 # Command: Stop game timer
 @bot.command(name="stop")
