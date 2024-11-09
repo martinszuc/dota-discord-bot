@@ -39,24 +39,25 @@ game_timers = {}
 
 @bot.event
 async def on_message(message):
-    # Log every message received for troubleshooting
+    # Log each message for troubleshooting
     logger.info(f"Received message in channel {message.channel} from {message.author}: {message.content}")
 
-    # Ignore messages sent by the bot itself
+    # Ignore messages from the bot itself
     if message.author == bot.user:
         return
 
-    # Check if the message is from a webhook and starts with the command prefix
+    # Check if message is from a webhook
     if message.webhook_id and message.content.startswith(PREFIX):
         logger.info(f"Processing webhook message as command: {message.content}")
-        # Make the bot explicitly process the webhook message as a command
+
+        # Temporarily set webhook message as a "user" for command processing
+        message.author = await bot.fetch_user(bot.user.id)
         await bot.process_commands(message)
         return
 
-    # Process regular user messages that start with the command prefix
+    # Process regular user commands
     if message.content.startswith(PREFIX):
         await bot.process_commands(message)
-
 
 # Event: Bot is ready
 @bot.event
