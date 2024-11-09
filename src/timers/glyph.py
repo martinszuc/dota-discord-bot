@@ -1,7 +1,6 @@
 # src/timers/glyph.py
 
 import asyncio
-import logging
 from communication.announcement import Announcement
 from src.timers.base import BaseTimer
 from src.utils.config import logger
@@ -15,15 +14,22 @@ class GlyphTimer(BaseTimer):
 
     async def _run_timer(self, channel):
         try:
-            await self.announcement.announce(self.game_timer, "Enemy glyph pressed. 5 minutes cooldown.")
-            await asyncio.sleep(5 * 60)  # 5-minute cooldown
+            # Set cooldown duration based on game mode
+            cooldown_duration = 5 * 60 if self.game_timer.mode == 'regular' else 5 * 60  # 5 minutes for regular, 3 minutes for turbo
 
-            while self.is_running:
-                await self.pause_event.wait()  # Wait if paused
-                if not self.is_running:
-                    break
-                await self.announcement.announce(self.game_timer, "Enemy glyph now available!")
-                break
+            await self.announcement.announce(self.game_timer, "Enemy glyph activated. Cooldown started.")
+            await asyncio.sleep(cooldown_duration - 60)  # Announce 1-minute warning
+
+            if not self.is_running:
+                return
+            await self.announcement.announce(self.game_timer, "Enemy glyph available in 1 minute!")
+
+            await asyncio.sleep(60)  # Wait the remaining 1 minute
+
+            if not self.is_running:
+                return
+            await self.announcement.announce(self.game_timer, "Enemy glyph is now available!")
+
         except asyncio.CancelledError:
             logger.info("Glyph timer cancelled.")
         finally:

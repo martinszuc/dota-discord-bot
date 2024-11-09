@@ -15,11 +15,15 @@ class RoshanTimer(BaseTimer):
 
     async def _run_timer(self, channel):
         try:
-            min_respawn = 8 * 60  # 8 minutes
-            max_respawn = 11 * 60  # 11 minutes
+            if self.game_timer.mode == 'turbo':
+                min_respawn = 4 * 60  # Turbo mode: 4 minutes minimum respawn
+                max_respawn = 5.5 * 60  # Turbo mode: 5.5 minutes max respawn
+            else:
+                min_respawn = 8 * 60  # Regular mode: 8 minutes minimum respawn
+                max_respawn = 11 * 60  # Regular mode: 11 minutes max respawn
 
             await self.announcement.announce(self.game_timer, "Roshan killed!")
-            await asyncio.sleep(min_respawn - 60)  # 7 minutes
+            await asyncio.sleep(min_respawn - 60)  # Warning 1 minute before min respawn
 
             if not self.is_running:
                 return
@@ -29,13 +33,13 @@ class RoshanTimer(BaseTimer):
 
             if not self.is_running:
                 return
-            await self.announcement.announce(self.game_timer, "Roshan maybe up!")
+            await self.announcement.announce(self.game_timer, "Roshan may be up!")
 
-            await asyncio.sleep(max_respawn - min_respawn)  # Additional 4 minutes
+            await asyncio.sleep(max_respawn - min_respawn)  # Additional time to max respawn
 
             if not self.is_running:
                 return
-            await self.announcement.announce(self.game_timer, "Roshan up!")
+            await self.announcement.announce(self.game_timer, "Roshan is up!")
 
         except asyncio.CancelledError:
             logger.info("Roshan timer cancelled.")
