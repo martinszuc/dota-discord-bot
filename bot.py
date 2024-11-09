@@ -10,7 +10,7 @@ import yaml
 import ctypes.util
 from timer import GameTimer
 from roshan import RoshanTimer
-from events import EventsManager
+from event_manager import EventsManager
 from utils import parse_time
 
 # Load configuration

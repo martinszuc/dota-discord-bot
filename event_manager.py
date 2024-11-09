@@ -1,4 +1,4 @@
-# events.py
+# event_manager.py
 
 from sqlalchemy import Column, Integer, String, Boolean, create_engine
 from sqlalchemy.ext.declarative import declarative_base

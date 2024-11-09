@@ -9,7 +9,7 @@ import discord
 from discord.ext import tasks
 import edge_tts
 from utils import parse_time
-from events import EventsManager
+from event_manager import EventsManager
 
 logger = logging.getLogger(__name__)
 
