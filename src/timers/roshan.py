@@ -1,3 +1,5 @@
+# src/timers/roshan.py
+
 import asyncio
 from src.utils.config import logger
 from communication import Announcement
@@ -6,19 +8,19 @@ class RoshanTimer:
     """Class to manage Roshan's respawn timer."""
 
     def __init__(self, game_timer):
-        self.is_active = False
+        self.is_running = False  # Renamed from is_active
         self.game_timer = game_timer
         self.task = None
         self.announcement = Announcement()
 
     async def start(self, channel):
-        """Start the Roshan respawn timer with TTS announcements."""
-        if self.is_active:
+        """Start the Roshan respawn timer with announcements."""
+        if self.is_running:
             await self.announcement.announce(self.game_timer, "Roshan timer is already active.")
             logger.warning("Roshan timer is already active.")
             return
 
-        self.is_active = True
+        self.is_running = True
         await self.announcement.announce(self.game_timer, "Roshan has been killed! Starting respawn timer.")
         logger.info("Roshan timer started.")
 
@@ -33,19 +35,19 @@ class RoshanTimer:
 
             # Warning at min_respawn - 60 seconds
             await asyncio.sleep(min_respawn - 60)
-            if not self.is_active:
+            if not self.is_running:
                 return
             await self.announcement.announce(self.game_timer, "Roshan may respawn in 1 minute!")
 
             # Roshan may have respawned
             await asyncio.sleep(60)
-            if not self.is_active:
+            if not self.is_running:
                 return
             await self.announcement.announce(self.game_timer, "Roshan may have respawned!")
 
             # Definitive respawn
             await asyncio.sleep(max_respawn - min_respawn)
-            if not self.is_active:
+            if not self.is_running:
                 return
             await self.announcement.announce(self.game_timer, "Roshan has definitely respawned!")
 
@@ -54,19 +56,19 @@ class RoshanTimer:
             await self.announcement.announce(self.game_timer, "Roshan timer has been cancelled.")
         finally:
             # Reset after completion or cancellation
-            self.is_active = False
+            self.is_running = False
             self.task = None
 
     async def cancel(self):
         """Cancel the Roshan respawn timer."""
-        if self.is_active:
+        if self.is_running:
             if self.task and not self.task.done():
                 self.task.cancel()
                 try:
                     await self.task
                 except asyncio.CancelledError:
                     logger.info("Roshan timer task was successfully cancelled.")
-            self.is_active = False
+            self.is_running = False
             self.task = None
             await self.announcement.announce(self.game_timer, "Roshan timer has been reset and is inactive.")
             logger.info("Roshan timer has been reset and is inactive.")

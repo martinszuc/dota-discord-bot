@@ -486,23 +486,29 @@ async def shutdown():
     for guild_id, timer in game_timers.items():
         if timer.is_running():
             await timer.stop()
+
     # Stop all Roshan timers
     for guild_id, timer in roshan_timers.items():
-        if timer.is_active:
+        if timer.is_running:
             await timer.cancel()
+
     # Stop all Glyph timers
     for guild_id, timer in glyph_timers.items():
         if timer.is_running:
             await timer.cancel()
+
     # Stop all Tormentor timers
     for guild_id, timer in tormentor_timers.items():
         if timer.is_running:
             await timer.cancel()
+
     # Close the EventsManager session
     events_manager.close()
+
     # Disconnect all voice clients
     for voice_client in bot.voice_clients:
         await voice_client.disconnect()
+
     await bot.close()  # Properly close aiohttp connector through bot's close method
     logger.info("Bot has been shut down.")
 
