@@ -36,15 +36,25 @@ events_manager = EventsManager()
 # Data structures to keep track of game and child timers per guild
 game_timers = {}
 
+
 @bot.event
 async def on_message(message):
-    # Check if the message was sent by a webhook or user, and ignore bot's own messages
-    if message.author.bot and not message.webhook_id:
+    # Log every message received for troubleshooting
+    logger.info(f"Received message in channel {message.channel} from {message.author}: {message.content}")
+
+    # Ignore messages sent by the bot itself
+    if message.author == bot.user:
         return
+
+    # Check if the message is from a webhook
+    if message.webhook_id:
+        logger.info(
+            f"Message received from a webhook in channel {message.channel.name} with content: {message.content}")
 
     # Process the message if it starts with the command prefix
     if message.content.startswith(PREFIX):
         await bot.process_commands(message)
+
 
 # Event: Bot is ready
 @bot.event
