@@ -62,3 +62,8 @@ class EventsManager:
     def close(self):
         """Close the database session."""
         self.session.close()
+
+    def guild_has_events(self, guild_id):
+        """Check if a guild already has any events."""
+        return self.session.query(StaticEvent).filter_by(guild_id=str(guild_id)).first() is not None \
+            or self.session.query(PeriodicEvent).filter_by(guild_id=str(guild_id)).first() is not None
