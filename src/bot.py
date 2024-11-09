@@ -36,7 +36,6 @@ events_manager = EventsManager()
 # Data structures to keep track of game and child timers per guild
 game_timers = {}
 
-
 WEBHOOK_ID = os.getenv('WEBHOOK_ID')
 
 @bot.event
@@ -46,18 +45,24 @@ async def on_message(message):
 
     # Ignore messages from the bot itself to avoid command loops
     if message.author == bot.user:
+        logger.info("Ignoring message from the bot itself.")
         return
 
     # Check if message is from the specified webhook and contains a command
     if str(message.webhook_id) == WEBHOOK_ID and message.content.startswith(PREFIX):
         logger.info(f"Processing webhook message as command: {message.content}")
-        message.author = await bot.fetch_user(bot.user.id)
+
+        # Ensure the message is processed as a command
+        message.author = await bot.fetch_user(bot.user.id)  # Temporary author assignment
         await bot.process_commands(message)
+        logger.info("Command processed for webhook message.")
         return
 
     # Process regular user commands
     if message.content.startswith(PREFIX):
+        logger.info("Processing user command.")
         await bot.process_commands(message)
+
 
 
 # Event: Bot is ready
