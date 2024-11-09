@@ -75,7 +75,7 @@ class GameTimer:
         logger.info("Game timer stopped.")
 
         # Announce stop message
-        await announcement_manager.announce(self, "Game timer has been stopped and all events have been cleared.")
+        await announcement_manager.announce(self, "Good game! Well played everyone!")
 
         # Disconnect voice client if connected
         if self.voice_client and self.voice_client.is_connected():
