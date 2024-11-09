@@ -411,9 +411,11 @@ async def cancel_rosh_command(ctx):
 
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
-        await game_timers[guild_id].roshan_timer.cancel()
-        await timer_channel.send("Roshan timer has been cancelled.")
-        logger.info(f"Roshan timer cancelled by {ctx.author}")
+        # Reset Roshan timer
+        roshan_timer = roshan_timers[guild_id]
+        await roshan_timer.cancel()
+        await timer_channel.send("Roshan timer has been cancelled and reset.")
+        logger.info(f"Roshan timer cancelled and reset by {ctx.author}")
     else:
         await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", tts=True)
         logger.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")

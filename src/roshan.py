@@ -1,5 +1,3 @@
-# roshan.py
-
 import asyncio
 from .config import logger
 
@@ -24,6 +22,7 @@ class RoshanTimer:
         await self.game_timer.announce_message("Roshan has been killed! Starting respawn timer.")
         logger.info("Roshan timer started.")
 
+        # Run the timer in an asynchronous task
         self.task = asyncio.create_task(self.run_timer(channel))
 
     async def run_timer(self, channel):
@@ -58,7 +57,7 @@ class RoshanTimer:
             await self.game_timer.announce_message("Roshan timer has been cancelled.")
         finally:
             self.is_active = False
-            self.task = None  # Reset the task when finished or cancelled
+            self.task = None
 
     async def cancel(self):
         """Cancel the Roshan respawn timer."""
@@ -71,6 +70,6 @@ class RoshanTimer:
                     logger.info("Roshan timer task was successfully cancelled.")
             self.is_active = False
             self.task = None
-            logger.info("Roshan timer has been set to inactive.")
+            logger.info("Roshan timer has been reset and is inactive.")
         else:
             logger.info("Roshan timer was not active.")
