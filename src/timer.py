@@ -53,7 +53,7 @@ class GameTimer:
         """Stop the game timer and all child timers."""
         self.timer_task.cancel()
         self.paused = False
-        await self.events_manager.stop_all_events()
+        await self._stop_all_child_timers()
         logger.info("Game timer and all child timers stopped.")
 
     async def pause(self):
@@ -107,6 +107,24 @@ class GameTimer:
                     message = event['message']
                     await self.announcement_manager.announce(self, message)
                     logger.info(f"Periodic event triggered: ID={event_id}, message='{message}', interval={event['interval']}")
+
+    async def _stop_all_child_timers(self):
+        """Helper method to stop all child timers."""
+        for timer in [self.roshan_timer, self.glyph_timer, self.tormentor_timer]:
+            if timer.is_running:
+                await timer.stop()
+
+    async def _pause_all_child_timers(self):
+        """Helper method to pause all child timers."""
+        for timer in [self.roshan_timer, self.glyph_timer, self.tormentor_timer]:
+            if timer.is_running:
+                await timer.pause()
+
+    async def _resume_all_child_timers(self):
+        """Helper method to resume all child timers."""
+        for timer in [self.roshan_timer, self.glyph_timer, self.tormentor_timer]:
+            if timer.is_paused:
+                await timer.resume()
 
     def close(self):
         """Clean up resources."""
