@@ -20,9 +20,15 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Base class for declarative class definitions
 Base.metadata.create_all(bind=engine)
 
+def clear_database(session): # Clear the tables
+    session.query(StaticEvent).delete()
+    session.query(PeriodicEvent).delete()
+    session.commit()
+
 def populate_events():
     session = SessionLocal()
 
+    clear_database(session)
     # Add regular static events
     for event_id, event_data in regular_static_events.items():
         static_event = StaticEvent(
