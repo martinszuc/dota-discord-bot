@@ -38,29 +38,34 @@ game_timers = {}
 
 WEBHOOK_ID = os.getenv('WEBHOOK_ID')
 
-
 @bot.event
 async def on_message(message):
     # Log received message details for troubleshooting
     logger.info(f"Received message in channel {message.channel} from {message.author}: {message.content}")
 
-    # Check if the message is in the specified guild's timer channel
-    if message.guild and message.channel.name == TIMER_CHANNEL_NAME:
-        # Ensure the message starts with the command prefix
-        if message.content.startswith(PREFIX):
-            logger.info("Processing command from timer-bot channel directly.")
-            try:
-                await bot.process_commands(message)
-                logger.info("Command processed successfully.")
-            except Exception as e:
-                logger.error(f"Error while processing command from timer-bot channel: {e}", exc_info=True)
+    # Check if message is from a webhook with the correct prefix
+    if message.webhook_id and message.content.startswith(PREFIX):
+        logger.info("Webhook message received. Attempting to process as a command.")
+
+        # Mock author permissions for webhook messages
+        message.author = type('User', (object,), {
+            'guild_permissions': discord.Permissions.all(),
+            'id': bot.user.id,
+            'bot': False
+        })()
+
+        # Process command from webhook message
+        try:
+            await bot.process_commands(message)
+            logger.info("Webhook command processed successfully.")
+        except Exception as e:
+            logger.error(f"Error processing command from webhook: {e}", exc_info=True)
         return
 
     # Process regular user commands in all channels
     if message.content.startswith(PREFIX):
         logger.info("Processing user command.")
         await bot.process_commands(message)
-
 
 
 # Event: Bot is ready
