@@ -1,9 +1,11 @@
 # cogs/help_cog.py
 
 import logging
-import discord
+
 from discord.ext import commands
+
 from src.utils.config import PREFIX
+
 
 class HelpCog(commands.Cog):
     """A Cog for handling the help command."""
@@ -48,6 +50,14 @@ class HelpCog(commands.Cog):
 - `{self.prefix}glyph` *(Alias: `g`)*
   - Starts a 5-minute cooldown timer for the enemy's glyph.
   - **Example:** `{self.prefix}glyph`
+  
+- `{self.prefix}cancel-glyph` *(Aliases: `cg`)*
+  - Cancels the Glyph cooldown timer.
+  - **Example:** `{self.prefix}cancel-glyph`
+  
+- `{self.prefix}tormentor` *(Aliases: `tm`, `torm`)*
+  - Logs Tormentor's death and starts the respawn timer.
+  - **Example:** `{self.prefix}tormentor`
 
 - `{self.prefix}add-event <type> <parameters>`
   - Adds a custom event.
