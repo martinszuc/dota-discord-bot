@@ -13,14 +13,8 @@ from .event_manager import EventsManager
 from .roshan import RoshanTimer
 from .timer import GameTimer
 from .utils import parse_time
+from .config import PREFIX, TIMER_CHANNEL_NAME, VOICE_CHANNEL_NAME
 
-# Load configuration from config.yaml
-with open("../config/config.yaml", "r") as file:
-    config = yaml.safe_load(file)
-
-PREFIX = config.get("prefix", "!")
-TIMER_CHANNEL_NAME = config.get("timer_channel", "timer-bot")
-VOICE_CHANNEL_NAME = config.get("voice_channel", "DOTA")
 
 # Setup logging
 logging.basicConfig(

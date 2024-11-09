@@ -3,17 +3,7 @@
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-import yaml
-import os
-
-# Load configuration
-config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "config.yaml")
-
-with open(config_path, "r") as file:
-    config = yaml.safe_load(file)
-
-
-DATABASE_URL = config.get("database_url", "sqlite:///bot.db")
+from .config import DATABASE_URL
 
 # Create the SQLAlchemy engine
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
