@@ -1,9 +1,9 @@
 import asyncio
 import hashlib
 import os
-import discord
 import re
 import edge_tts
+import discord
 from src.utils.config import logger, TTS_CACHE_DIR
 
 class TTSManager:
@@ -11,6 +11,7 @@ class TTSManager:
 
     def __init__(self, voice="en-US-AriaNeural"):
         self.voice = voice
+        os.makedirs(TTS_CACHE_DIR, exist_ok=True)
 
     async def get_tts_audio(self, message):
         """Generates or retrieves TTS audio for a given message."""
@@ -49,6 +50,7 @@ class TTSManager:
                 logger.info(f"Started playing audio in voice channel for message: '{message}'")
             else:
                 logger.warning("Voice client is already playing audio.")
+                return
 
             # Wait until audio finishes playing
             while voice_client.is_playing():

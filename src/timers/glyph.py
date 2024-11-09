@@ -1,7 +1,6 @@
 import asyncio
-
-from ..utils.config import logger
-
+from src.utils.config import logger
+from communication import Announcement
 
 class GlyphTimer:
     """Class to manage the Glyph cooldown timer."""
@@ -10,15 +9,17 @@ class GlyphTimer:
         self.is_active = False
         self.game_timer = game_timer
         self.task = None
+        self.announcement = Announcement()
 
     async def start(self, channel):
         """Start the Glyph cooldown timer with TTS announcements."""
-        if self.task:
-            await self.cancel()
+        if self.is_active:
+            await self.announcement.announce(self.game_timer, "Glyph timer is already active.")
+            logger.warning("Glyph timer is already active.")
+            return
 
         self.is_active = True
-        await channel.send("Enemy glyph used! Starting 5-minute cooldown timer.")
-        await self.game_timer.announce_message("Enemy glyph used! Starting 5-minute cooldown timer.")
+        await self.announcement.announce(self.game_timer, "Enemy glyph used! Starting 5-minute cooldown timer.")
         logger.info("Glyph timer started.")
 
         # Start the cooldown timer task
@@ -27,17 +28,25 @@ class GlyphTimer:
     async def run_timer(self, channel):
         """Run the Glyph cooldown timer and announce when it's ready."""
         try:
-            cooldown_duration = 5 * 60  # 5 minutes
+            glyph_cooldown = 5 * 60  # 5 minutes
 
-            # Sleep for the cooldown period
-            await asyncio.sleep(cooldown_duration)
+            # Announce when 30 seconds are left
+            await asyncio.sleep(glyph_cooldown - 30)
             if not self.is_active:
                 return
-            await self._announce(channel, "Glyph is now available!")
+            await self.announcement.announce(self.game_timer, "Enemy glyph available in 30 seconds!")
+
+            # Announce when cooldown ends
+            await asyncio.sleep(30)
+            if not self.is_active:
+                return
+            await self.announcement.announce(self.game_timer, "Enemy glyph cooldown has ended!")
+
+            logger.info("Enemy glyph cooldown ended.")
 
         except asyncio.CancelledError:
             logger.info("Glyph timer was cancelled.")
-            await self._announce(channel, "Glyph timer has been cancelled.")
+            await self.announcement.announce(self.game_timer, "Glyph timer has been cancelled.")
         finally:
             # Reset after completion or cancellation
             self.is_active = False
@@ -53,13 +62,8 @@ class GlyphTimer:
                 except asyncio.CancelledError:
                     logger.info("Glyph timer task was successfully cancelled.")
             self.is_active = False
-            self.task = None  # Reset task reference
-            logger.info("Glyph timer has been set to inactive.")
+            self.task = None
+            await self.announcement.announce(self.game_timer, "Glyph timer has been reset and is inactive.")
+            logger.info("Glyph timer has been reset and is inactive.")
         else:
             logger.info("Glyph timer was not active.")
-
-    async def _announce(self, channel, message):
-        """Helper function to send TTS announcements."""
-        await channel.send(message)
-        await self.game_timer.announce_message(message)
-        logger.info(message)

@@ -7,10 +7,10 @@ import signal
 import discord
 from discord.ext import commands
 
-from .event_manager import EventsManager
+from src.event_manager import EventsManager
 from src.timers.roshan import RoshanTimer
 from src.timers.glyph import GlyphTimer
-from .timer import GameTimer
+from src.timer import GameTimer
 from src.utils.utils import parse_time
 from src.utils.config import PREFIX, TIMER_CHANNEL_NAME, VOICE_CHANNEL_NAME, logger
 
@@ -51,7 +51,6 @@ async def on_ready():
         else:
             logger.info(f"Channel '{TIMER_CHANNEL_NAME}' found in guild '{guild.name}'.")
 
-
 # Event: Bot joins a new guild
 @bot.event
 async def on_guild_join(guild):
@@ -70,7 +69,6 @@ async def on_guild_join(guild):
         (chan for chan in guild.text_channels if chan.permissions_for(guild.me).send_messages), None)
     if channel:
         await channel.send("Dota Timer Bot has been added to this server! Type `!bot-help` to get started.")
-
 
 # Event: Command errors
 @bot.event
@@ -91,14 +89,11 @@ async def on_command_error(ctx, error):
         await ctx.send("An unexpected error occurred.", tts=True)
         logger.error(f"Unhandled error in command '{ctx.command}': {error}", exc_info=True)
 
-
 # Check: Admin permissions
 def is_admin():
     def predicate(ctx):
         return ctx.author.guild_permissions.administrator
-
     return commands.check(predicate)
-
 
 # Command: Start game timer
 @bot.command(name="start")
@@ -156,8 +151,6 @@ async def start_game(ctx, countdown: int, *args):
     # Initialize and start the GameTimer
     game_timer = GameTimer(guild_id, mode)
     game_timers[guild_id] = game_timer
-    roshan_timer = RoshanTimer(game_timer)
-    roshan_timers[guild_id] = roshan_timer
 
     # Connect to the voice channel
     voice_client = discord.utils.get(bot.voice_clients, guild=ctx.guild)
@@ -171,7 +164,6 @@ async def start_game(ctx, countdown: int, *args):
     await game_timer.start(timer_text_channel, countdown, players_in_channel, mention_users)
     logger.info(
         f"Game timer started by {ctx.author} with countdown={countdown}, mode={mode}, and players={player_names}")
-
 
 # Command: Stop game timer
 @bot.command(name="stop")
@@ -201,7 +193,6 @@ async def stop_game(ctx):
     else:
         logger.warning("Voice client was not connected.")
 
-
 # Command: Pause game timer
 @bot.command(name="pause", aliases=['p'])
 async def pause_game(ctx):
@@ -219,7 +210,6 @@ async def pause_game(ctx):
     else:
         await ctx.send("Game timer is not currently running.", tts=True)
         logger.warning(f"{ctx.author} attempted to pause the timer, but it was not running.")
-
 
 # Command: Unpause game timer
 @bot.command(name="unpause", aliases=['unp'])
@@ -239,7 +229,6 @@ async def unpause_game(ctx):
         await ctx.send("Game timer is not currently running.", tts=True)
         logger.warning(f"{ctx.author} attempted to unpause the timer, but it was not running.")
 
-
 # Command: Roshan timer
 @bot.command(name="rosh", aliases=['rs', 'rsdead'])
 async def rosh_timer_command(ctx):
@@ -248,20 +237,26 @@ async def rosh_timer_command(ctx):
     guild_id = ctx.guild.id
     if guild_id not in game_timers or not game_timers[guild_id].is_running():
         await ctx.send("Game is not active.", tts=True)
+        logger.warning(f"Roshan timer attempted by {ctx.author} but game is not active.")
         return
 
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
-        if guild_id not in roshan_timers:
-            roshan_timers[guild_id] = RoshanTimer(game_timers[guild_id])
-        await roshan_timers[guild_id].start(timer_channel)
+        roshan_timer = roshan_timers.get(guild_id)
+        if not roshan_timer:
+            roshan_timer = RoshanTimer(game_timers[guild_id])
+            roshan_timers[guild_id] = roshan_timer
+        await roshan_timer.start(timer_channel)
         logger.info(f"Roshan timer started by {ctx.author}")
     else:
         await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", tts=True)
+        logger.warning(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
+# Command: Cancel Roshan timer
 @bot.command(name='cancel-rosh', aliases=['rsalive', 'rsback'])
 async def cancel_rosh_command(ctx):
     """Cancel the Roshan respawn timer."""
+    logger.info(f"Command '!cancel-rosh' invoked by {ctx.author}")
     guild_id = ctx.guild.id
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if guild_id in roshan_timers:
@@ -270,7 +265,7 @@ async def cancel_rosh_command(ctx):
         logger.info(f"Roshan timer cancelled by {ctx.author}")
     else:
         await ctx.send("No active Roshan timer to cancel.", tts=True)
-
+        logger.warning(f"No active Roshan timer found to cancel for guild ID {guild_id}.")
 
 # Command: Glyph cooldown timer
 @bot.command(name="glyph", aliases=['g'])
@@ -280,21 +275,26 @@ async def glyph_timer_command(ctx):
     guild_id = ctx.guild.id
     if guild_id not in game_timers or not game_timers[guild_id].is_running():
         await ctx.send("Game is not active.", tts=True)
+        logger.warning(f"Glyph timer attempted by {ctx.author} but game is not active.")
         return
 
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
-        if guild_id not in glyph_timers:
-            glyph_timers[guild_id] = GlyphTimer(game_timers[guild_id])
-        await glyph_timers[guild_id].start(timer_channel)
+        glyph_timer = glyph_timers.get(guild_id)
+        if not glyph_timer:
+            glyph_timer = GlyphTimer(game_timers[guild_id])
+            glyph_timers[guild_id] = glyph_timer
+        await glyph_timer.start(timer_channel)
         logger.info(f"Glyph timer started by {ctx.author}")
     else:
         await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", tts=True)
         logger.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
+# Command: Cancel Glyph timer
 @bot.command(name="cancel-glyph", aliases=['cg'])
 async def cancel_glyph_command(ctx):
     """Cancel the Glyph cooldown timer."""
+    logger.info(f"Command '!cancel-glyph' invoked by {ctx.author}")
     guild_id = ctx.guild.id
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if guild_id in glyph_timers:
@@ -303,7 +303,7 @@ async def cancel_glyph_command(ctx):
         logger.info(f"Glyph timer cancelled by {ctx.author}")
     else:
         await ctx.send("No active Glyph timer to cancel.", tts=True)
-
+        logger.warning(f"No active Glyph timer found to cancel for guild ID {guild_id}.")
 
 # Command: Add custom event
 @bot.command(name="add-event")
@@ -320,8 +320,7 @@ async def add_event_command(ctx, event_type: str, *args):
     try:
         if event_type.lower() == 'static':
             if len(args) < 2:
-                await ctx.send("Insufficient arguments for static event. Usage: `!add-event static <MM:SS> <message>`",
-                               tts=True)
+                await ctx.send("Insufficient arguments for static event. Usage: `!add-event static <MM:SS> <message>`", tts=True)
                 return
             time_str = args[0]
             message = ' '.join(args[1:])
@@ -331,9 +330,7 @@ async def add_event_command(ctx, event_type: str, *args):
             logger.info(f"Static event added with ID {event_id} by {ctx.author}")
         elif event_type.lower() == 'periodic':
             if len(args) < 4:
-                await ctx.send(
-                    "Insufficient arguments for periodic event. Usage: `!add-event periodic <MM:SS> <MM:SS> <MM:SS> <message>`",
-                    tts=True)
+                await ctx.send("Insufficient arguments for periodic event. Usage: `!add-event periodic <MM:SS> <MM:SS> <MM:SS> <message>`", tts=True)
                 return
             start_time_str = args[0]
             interval_str = args[1]
@@ -355,7 +352,6 @@ async def add_event_command(ctx, event_type: str, *args):
         await ctx.send(f"Error adding event: {e}", tts=True)
         logger.error(f"Error adding event by {ctx.author}: {e}", exc_info=True)
 
-
 # Command: Remove custom event
 @bot.command(name="remove-event")
 @is_admin()
@@ -374,7 +370,6 @@ async def remove_event_command(ctx, event_id: int):
     except Exception as e:
         await ctx.send(f"Error removing event: {e}", tts=True)
         logger.error(f"Error removing event ID {event_id} by {ctx.author}: {e}", exc_info=True)
-
 
 # Command: List custom events
 @bot.command(name="list-events", aliases=[('ls', 'events')])
@@ -439,17 +434,14 @@ async def shutdown():
     await bot.close()
     logger.info("Bot has been shut down.")
 
-
 # Handle termination signals for graceful shutdown
 def handle_signal(sig):
     logger.info(f"Received exit signal {sig.name}...")
     asyncio.create_task(shutdown())
 
-
 # Register signal handlers
 signal.signal(signal.SIGINT, lambda s, f: handle_signal(signal.Signals.SIGINT))
 signal.signal(signal.SIGTERM, lambda s, f: handle_signal(signal.Signals.SIGTERM))
-
 
 # Main entry point
 async def main():
@@ -459,7 +451,6 @@ async def main():
         logger.error("Bot token not found. Please set the 'DISCORD_BOT_TOKEN' environment variable.")
         return
     await bot.start(token)
-
 
 if __name__ == "__main__":
     try:

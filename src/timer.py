@@ -1,17 +1,16 @@
 # timer.py
 
 import asyncio
-
-import discord
 from discord.ext import tasks
-
 from src.utils.config import logger
+from communication import Announcement
+from .timers.roshan import RoshanTimer
+from .timers.glyph import GlyphTimer
 from .event_manager import EventsManager
-from src.timers.roshan import RoshanTimer
 from .tts_manager import TTSManager
 
-# Initialize TTSManager once at the top level of your bot
-tts_manager = TTSManager()
+# Initialize Announcement once
+announcement_manager = Announcement()
 
 class GameTimer:
     """Class to manage the game timer and events."""
@@ -34,8 +33,7 @@ class GameTimer:
         self.static_events = {}
         self.periodic_events = {}
         self.roshan_timer = RoshanTimer(self)  # Integrate RoshanTimer here
-
-        self.glyph_timer_task = None  # Add this line
+        self.glyph_timer = GlyphTimer(self)    # Integrate GlyphTimer here
 
     async def start(self, channel, countdown, usernames, mention_users=False):
         """Start the game timer."""
@@ -75,11 +73,8 @@ class GameTimer:
         self.paused = False
         logger.info("Game timer stopped.")
 
-        if self.channel:
-            await self.channel.send("Game timer has been stopped and all events have been cleared.", tts=True)
-            self.channel = None
-        else:
-            logger.warning("Cannot send stop message; channel is not set.")
+        # Announce stop message
+        await announcement_manager.announce(self, "Game timer has been stopped and all events have been cleared.")
 
         # Disconnect voice client if connected
         if self.voice_client and self.voice_client.is_connected():
@@ -92,41 +87,10 @@ class GameTimer:
             await self.roshan_timer.cancel()
             logger.info("Roshan timer cancelled.")
 
-        # Cancel the Glyph timer if it's running
-        if self.glyph_timer_task and not self.glyph_timer_task.done():
-            self.glyph_timer_task.cancel()
-            try:
-                await self.glyph_timer_task
-            except asyncio.CancelledError:
-                pass
+        # Cancel Glyph timer if active
+        if self.glyph_timer.is_active:
+            await self.glyph_timer.cancel()
             logger.info("Glyph timer cancelled.")
-
-    async def start_glyph_timer(self, channel):
-        """Start a 5-minute timer for the enemy's glyph cooldown."""
-        if self.glyph_timer_task and not self.glyph_timer_task.done():
-            await channel.send("Glyph timer is already active.", tts=True)
-            return
-
-        self.glyph_timer_task = asyncio.create_task(self._run_glyph_timer(channel))
-
-    async def _run_glyph_timer(self, channel):
-        try:
-            glyph_cooldown = 5 * 60
-            await asyncio.sleep(glyph_cooldown - 30)
-            message = "Enemy glyph available in 30 seconds!"
-            await channel.send(message, tts=True)
-            await self.announce_message(message)
-            await asyncio.sleep(30)
-            message = "Enemy glyph cooldown has ended!"
-            await channel.send(message, tts=True)
-            await self.announce_message(message)
-            logger.info("Enemy glyph cooldown ended.")
-        except asyncio.CancelledError:
-            logger.info("Glyph timer was cancelled.")
-            await channel.send("Glyph timer has been cancelled.", tts=True)
-            await self.announce_message("Glyph timer has been cancelled.")
-        finally:
-            self.glyph_timer_task = None
 
     async def pause(self):
         """Pause the game timer."""
@@ -170,15 +134,14 @@ class GameTimer:
         if self.time_elapsed >= 90 * 60:
             await self.stop()
             logger.info("Game timer automatically stopped after 1.5 hours.")
-            if self.channel:
-                await self.channel.send("Game timer automatically stopped after 1.5 hours.", tts=True)
+            await announcement_manager.announce(self, "Game timer automatically stopped after 1.5 hours.")
 
     async def _check_static_events(self):
         """Check and trigger static events."""
         for event_id, event in self.static_events.items():
             if self.time_elapsed == event["time"]:
                 message = event['message']
-                await self.announce_message(message)
+                await announcement_manager.announce(self, message)
                 logger.info(f"Static event triggered: ID={event_id}, time={event['time']}, message='{message}'")
 
     async def _check_periodic_events(self):
@@ -187,24 +150,5 @@ class GameTimer:
             if event["start_time"] <= self.time_elapsed <= event["end_time"]:
                 if (self.time_elapsed - event["start_time"]) % event["interval"] == 0:
                     message = event['message']
-                    await self.announce_message(message)
+                    await announcement_manager.announce(self, message)
                     logger.info(f"Periodic event triggered: ID={event_id}, message='{message}', interval={event['interval']}")
-
-    async def announce_message(self, message):
-        """Announce a message in the text and voice channels."""
-        # Send message in text channel using embeds
-        if self.channel:
-            embed = discord.Embed(description=message, color=0x00ff00)
-            await self.channel.send(embed=embed, tts=True)
-            logger.info(f"Sent embed message to text channel: {message}")
-        else:
-            logger.warning("Cannot send message; text channel is not set.")
-
-        # Announce message in voice channel
-        if self.voice_client and self.voice_client.is_connected():
-            try:
-                await tts_manager.play_tts(self.voice_client, message)
-            except Exception as e:
-                logger.error(f"Error during voice announcement: {e}", exc_info=True)
-        else:
-            logger.warning("Voice client is not connected; cannot announce message.")
