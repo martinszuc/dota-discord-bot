@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 import yaml
 
 # Load configuration
-with open("config.yaml", "r") as file:
+with open("../config/config.yaml", "r") as file:
     config = yaml.safe_load(file)
 
 DATABASE_URL = config.get("database_url", "sqlite:///bot.db")

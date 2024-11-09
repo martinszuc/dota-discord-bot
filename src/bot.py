@@ -1,21 +1,21 @@
 # bot.py
-
-import discord
-from discord.ext import commands, tasks
-import os
 import asyncio
-import logging
-import yaml
 import ctypes.util
+import logging
+import os
 import signal
 
-from timer import GameTimer
-from roshan import RoshanTimer
+import discord
+import yaml
+from discord.ext import commands
+
 from event_manager import EventsManager
+from roshan import RoshanTimer
+from timer import GameTimer
 from utils import parse_time
 
 # Load configuration from config.yaml
-with open("config.yaml", "r") as file:
+with open("../config/config.yaml", "r") as file:
     config = yaml.safe_load(file)
 
 PREFIX = config.get("prefix", "!")
@@ -27,7 +27,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
     handlers=[
-        logging.FileHandler("bot.log"),
+        logging.FileHandler("../logs/bot.log"),
         logging.StreamHandler()
     ]
 )
@@ -56,8 +56,6 @@ events_manager = EventsManager()
 # Data structures to keep track of timers and Roshan timers per guild
 game_timers = {}
 roshan_timers = {}
-
-# Remove HTTP server setup using aiohttp
 
 # Event: Bot is ready
 @bot.event
@@ -171,7 +169,7 @@ async def start_game(ctx, countdown: int, *args):
         return
 
     # Announce the start of the game timer
-    await timer_text_channel.send(f"Starting {mode} game timer with players: {player_names}", tts=True)
+    await timer_text_channel.send(f"Starting {mode} game timer with players: {player_names}")
 
     # Initialize and start the GameTimer
     game_timer = GameTimer(guild_id, mode)
@@ -203,7 +201,7 @@ async def stop_game(ctx):
         timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
         if timer_channel:
             await game_timers[guild_id].stop()
-            await timer_channel.send("Game timer stopped.", tts=True)
+            await timer_channel.send("Game timer stopped.")
             logger.info(f"Game timer stopped by {ctx.author}")
         else:
             await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", tts=True)
@@ -223,7 +221,7 @@ async def stop_game(ctx):
 
 
 # Command: Pause game timer
-@bot.command(name="pause")
+@bot.command(name="pause", aliases=['p'])
 async def pause_game(ctx):
     """Pause the game timer and all events."""
     logger.info(f"Command '!pause' invoked by {ctx.author}")
@@ -242,7 +240,7 @@ async def pause_game(ctx):
 
 
 # Command: Unpause game timer
-@bot.command(name="unpause")
+@bot.command(name="unpause", aliases=['unp'])
 async def unpause_game(ctx):
     """Resume the game timer and all events."""
     logger.info(f"Command '!unpause' invoked by {ctx.author}")
@@ -261,7 +259,7 @@ async def unpause_game(ctx):
 
 
 # Command: Roshan timer
-@bot.command(name="rosh")
+@bot.command(name="rosh", aliases=['rs', 'rsdead', 'rs-dead', 'rsdied', 'rs-died'])
 async def rosh_timer_command(ctx):
     """Log Roshan's death and start the respawn timer."""
     logger.info(f"Command '!rosh' invoked by {ctx.author}")
@@ -281,7 +279,7 @@ async def rosh_timer_command(ctx):
 
 
 # Command: Glyph cooldown timer
-@bot.command(name="glyph")
+@bot.command(name="glyph", aliases=['g'])
 async def glyph_timer(ctx):
     """Start a 5-minute timer for the enemy's glyph cooldown."""
     logger.info(f"Command '!glyph' invoked by {ctx.author}")
@@ -293,7 +291,7 @@ async def glyph_timer(ctx):
 
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
-        await timer_channel.send("Enemy glyph used! Starting 5-minute cooldown timer.", tts=True)
+        await timer_channel.send("Enemy glyph used! Starting 5-minute cooldown timer.")
         await game_timers[guild_id].start_glyph_timer(timer_channel)
         logger.info(f"Glyph timer started by {ctx.author}")
     else:
@@ -373,7 +371,7 @@ async def remove_event_command(ctx, event_id: int):
 
 
 # Command: List custom events
-@bot.command(name="list-events")
+@bot.command(name="list-events", aliases=[('ls', 'events')])
 async def list_events_command(ctx):
     """List all custom events for the current guild."""
     logger.info(f"Command '!list-events' invoked by {ctx.author}")
@@ -420,59 +418,24 @@ async def list_events_command(ctx):
     logger.info(f"Events listed for guild '{ctx.guild.name}' (ID: {guild_id})")
 
 
-# Command: Help
-@bot.command(name="bot-help")
-async def bot_help_command(ctx):
-    """Show available commands with examples."""
-    logger.info(f"Command '!bot-help' invoked by {ctx.author}")
-    help_message = f"""
-**Dota Timer Bot - Help**
+@bot.command(name='cancel-rosh', aliases=['rsalive', 'rsback', 'rs-cancel', 'rs-back', 'rs-alive', 'rsb'])
+async def cancel_rosh_command(ctx):
+    """Cancel the Roshan respawn timer."""
+    logger.info(f"Command '!cancel-rosh' invoked by {ctx.author}")
+    guild_id = ctx.guild.id
+    if guild_id not in game_timers or not game_timers[guild_id].is_running():
+        await ctx.send("Game is not active.", tts=True)
+        logger.warning(f"Roshan timer cancel attempted by {ctx.author} but game is not active.")
+        return
 
-- `{PREFIX}start <countdown> [mode] [mention]`
-  - Starts the game timer with a countdown. Add 'mention' to mention players.
-  - **mode** can be 'regular' or 'turbo'. Defaults to 'regular'.
-  - **Example:** `{PREFIX}start 180` or `{PREFIX}start 180 turbo mention`
-
-- `{PREFIX}stop`
-  - Stops the current game timer.
-  - **Example:** `{PREFIX}stop`
-
-- `{PREFIX}pause`
-  - Pauses the game timer and all events.
-  - **Example:** `{PREFIX}pause`
-
-- `{PREFIX}unpause`
-  - Resumes the game timer and all events.
-  - **Example:** `{PREFIX}unpause`
-
-- `{PREFIX}rosh`
-  - Logs Roshan's death and starts an 8-minute respawn timer.
-  - **Example:** `{PREFIX}rosh`
-
-- `{PREFIX}glyph`
-  - Starts a 5-minute cooldown timer for the enemy's glyph.
-  - **Example:** `{PREFIX}glyph`
-
-- `{PREFIX}add-event <type> <parameters>`
-  - Adds a custom event.
-  - **Static Event Example:** `{PREFIX}add-event static 10:00 "Siege Creep incoming!"`
-  - **Periodic Event Example:** `{PREFIX}add-event periodic 05:00 02:00 20:00 "Bounty Runes soon!"`
-
-- `{PREFIX}remove-event <event_id>`
-  - Removes a custom event by its ID.
-  - **Example:** `{PREFIX}remove-event 3`
-
-- `{PREFIX}list-events`
-  - Lists all custom events.
-  - **Example:** `{PREFIX}list-events`
-
-- `{PREFIX}bot-help`
-  - Shows this help message.
-  - **Example:** `{PREFIX}bot-help`
-    """
-    await ctx.send(help_message)
-    logger.info(f"Help message sent to {ctx.author}")
-
+    timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
+    if timer_channel:
+        await game_timers[guild_id].roshan_timer.cancel()
+        await timer_channel.send("Roshan timer has been cancelled.")
+        logger.info(f"Roshan timer cancelled by {ctx.author}")
+    else:
+        await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", tts=True)
+        logger.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
 # Graceful shutdown handling
 async def shutdown():
@@ -505,11 +468,12 @@ signal.signal(signal.SIGTERM, lambda s, f: handle_signal(signal.Signals.SIGTERM)
 # Main entry point
 async def main():
     # Run the bot
-    TOKEN = os.getenv('DISCORD_BOT_TOKEN')
-    if not TOKEN:
+    token = os.getenv('DISCORD_BOT_TOKEN')
+    if not token:
         logger.error("Bot token not found. Please set the 'DISCORD_BOT_TOKEN' environment variable.")
         return
-    await bot.start(TOKEN)
+    await bot.start(token)
+
 
 if __name__ == "__main__":
     try:

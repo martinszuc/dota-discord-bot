@@ -12,7 +12,6 @@ from utils import parse_time
 from event_manager import EventsManager
 from roshan import RoshanTimer
 
-
 logger = logging.getLogger(__name__)
 
 class GameTimer:
@@ -36,6 +35,8 @@ class GameTimer:
         self.static_events = {}
         self.periodic_events = {}
         self.roshan_timer = RoshanTimer(self)  # Integrate RoshanTimer here
+
+        self.glyph_timer_task = None  # Add this line
 
     async def start(self, channel, countdown, usernames, mention_users=False):
         """Start the game timer."""
@@ -87,9 +88,46 @@ class GameTimer:
             self.voice_client = None
             logger.info("Voice client disconnected.")
 
-        # Stop Roshan timer if active
+        # Cancel Roshan timer if active
         if self.roshan_timer.is_active:
             await self.roshan_timer.cancel()
+            logger.info("Roshan timer cancelled.")
+
+        # Cancel the Glyph timer if it's running
+        if self.glyph_timer_task and not self.glyph_timer_task.done():
+            self.glyph_timer_task.cancel()
+            try:
+                await self.glyph_timer_task
+            except asyncio.CancelledError:
+                pass
+            logger.info("Glyph timer cancelled.")
+
+    async def start_glyph_timer(self, channel):
+        """Start a 5-minute timer for the enemy's glyph cooldown."""
+        if self.glyph_timer_task and not self.glyph_timer_task.done():
+            await channel.send("Glyph timer is already active.", tts=True)
+            return
+
+        self.glyph_timer_task = asyncio.create_task(self._run_glyph_timer(channel))
+
+    async def _run_glyph_timer(self, channel):
+        try:
+            glyph_cooldown = 5 * 60
+            await asyncio.sleep(glyph_cooldown - 30)
+            message = "Enemy glyph available in 30 seconds!"
+            await channel.send(message, tts=True)
+            await self.announce_message(message)
+            await asyncio.sleep(30)
+            message = "Enemy glyph cooldown has ended!"
+            await channel.send(message, tts=True)
+            await self.announce_message(message)
+            logger.info("Enemy glyph cooldown ended.")
+        except asyncio.CancelledError:
+            logger.info("Glyph timer was cancelled.")
+            await channel.send("Glyph timer has been cancelled.", tts=True)
+            await self.announce_message("Glyph timer has been cancelled.")
+        finally:
+            self.glyph_timer_task = None
 
     async def pause(self):
         """Pause the game timer."""
@@ -202,15 +240,3 @@ class GameTimer:
         else:
             logger.warning("Voice client is not connected; cannot announce message.")
 
-    async def start_glyph_timer(self, channel):
-        """Start a 5-minute timer for the enemy's glyph cooldown."""
-        glyph_cooldown = 5 * 60
-        await asyncio.sleep(glyph_cooldown - 30)
-        message = "Enemy glyph available in 30 seconds!"
-        await channel.send(message, tts=True)
-        await self.announce_message(message)
-        await asyncio.sleep(30)
-        message = "Enemy glyph cooldown has ended!"
-        await channel.send(message, tts=True)
-        await self.announce_message(message)
-        logger.info("Enemy glyph cooldown ended.")
