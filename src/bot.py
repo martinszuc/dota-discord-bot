@@ -1,4 +1,5 @@
 # bot.py
+
 import asyncio
 import ctypes.util
 import os
@@ -26,7 +27,7 @@ intents.message_content = True
 intents.members = True
 intents.voice_states = True
 
-# Initialize the bot
+# Initialize the bot with no default help command
 bot = commands.Bot(command_prefix=PREFIX, intents=intents, help_command=None)
 
 # Instantiate EventsManager
@@ -66,7 +67,7 @@ async def on_guild_join(guild):
     channel = guild.system_channel or next(
         (chan for chan in guild.text_channels if chan.permissions_for(guild.me).send_messages), None)
     if channel:
-        await channel.send("Dota Timer Bot has been added to this server! Type `!bot-help` to get started.")
+        await channel.send(f"Dota Timer Bot has been added to this server! Type `{PREFIX}bot-help` to get started.")
 
 # Event: Command errors
 @bot.event
@@ -78,7 +79,7 @@ async def on_command_error(ctx, error):
         await ctx.send("One or more arguments are invalid.", tts=True)
         logger.warning(f"Bad arguments in command '{ctx.command}'. Context: {ctx.message.content}")
     elif isinstance(error, commands.CommandNotFound):
-        await ctx.send(f"Command not found. Type {PREFIX}bot-help for a list of available commands.", tts=True)
+        await ctx.send(f"Command not found. Type `{PREFIX}bot-help` for a list of available commands.", tts=True)
         logger.warning(f"Command not found. Context: {ctx.message.content}")
     elif isinstance(error, commands.CheckFailure):
         await ctx.send("You do not have permission to use this command.", tts=True)
@@ -92,6 +93,17 @@ def is_admin():
     def predicate(ctx):
         return ctx.author.guild_permissions.administrator
     return commands.check(predicate)
+
+# Load all cogs in the 'cogs' directory
+async def load_cogs():
+    for filename in os.listdir('./cogs'):
+        if filename.endswith('.py') and not filename.startswith('__'):
+            extension = f'cogs.{filename[:-3]}'
+            try:
+                await bot.load_extension(extension)
+                logger.info(f"Loaded cog: {extension}")
+            except Exception as e:
+                logger.error(f"Failed to load cog {extension}: {e}", exc_info=True)
 
 # Command: Start game timer
 @bot.command(name="start")
@@ -442,11 +454,13 @@ signal.signal(signal.SIGTERM, lambda s, f: handle_signal(signal.Signals.SIGTERM)
 
 # Main entry point
 async def main():
-    token = os.getenv('DISCORD_BOT_TOKEN')
-    if not token:
-        logger.error("Bot token not found. Please set the 'DISCORD_BOT_TOKEN' environment variable.")
-        return
-    await bot.start(token)
+    async with bot:
+        await load_cogs()
+        token = os.getenv('DISCORD_BOT_TOKEN')
+        if not token:
+            logger.error("Bot token not found. Please set the 'DISCORD_BOT_TOKEN' environment variable.")
+            return
+        await bot.start(token)
 
 if __name__ == "__main__":
     try:
