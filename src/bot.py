@@ -48,11 +48,7 @@ async def on_message(message):
         logger.info("Ignoring message from the bot itself.")
         return
 
-    # Check if message is from the specified webhook and contains a command
     if str(message.webhook_id) == WEBHOOK_ID and message.content.startswith(PREFIX):
-        logger.info(f"Processing webhook message as command: {message.content}")
-
-        # Ensure the message is processed as a command
         message.author = await bot.fetch_user(bot.user.id)  # Temporary author assignment
         await bot.process_commands(message)
         logger.info("Command processed for webhook message.")
