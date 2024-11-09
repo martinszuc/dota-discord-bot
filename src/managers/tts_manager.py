@@ -9,9 +9,16 @@ from src.utils.config import logger, TTS_CACHE_DIR
 class TTSManager:
     """A class to manage TTS generation, caching, and playback in Discord voice channels."""
 
-    def __init__(self, voice="en-US-AriaNeural"):
+    # def __init__(self, voice="en-US-AriaNeural", volume=0.5):
+    def __init__(self, voice="en-GB-LibbyNeural", volume=0.5):
         self.voice = voice
+        self.volume = volume  # Default volume (0.0 to 1.0)
         os.makedirs(TTS_CACHE_DIR, exist_ok=True)
+
+    async def set_voice(self, new_voice):
+        """Set a new TTS voice."""
+        self.voice = new_voice
+        logger.info(f"TTS voice set to {self.voice}")
 
     async def get_tts_audio(self, message):
         """Generates or retrieves TTS audio for a given message."""
@@ -41,13 +48,16 @@ class TTSManager:
         return filename
 
     async def play_tts(self, voice_client, message):
-        """Plays TTS audio in the specified voice client channel."""
+        """Plays TTS audio in the specified voice client channel with volume control."""
         audio_file = await self.get_tts_audio(message)
         if audio_file and voice_client and voice_client.is_connected():
             audio_source = discord.FFmpegPCMAudio(audio_file)
+            # Apply volume control
+            volume_controlled_audio = discord.PCMVolumeTransformer(audio_source, volume=self.volume)
+
             if not voice_client.is_playing():
-                voice_client.play(audio_source, after=lambda e: logger.info("TTS playback complete."))
-                logger.info(f"Started playing audio in voice channel for message: '{message}'")
+                voice_client.play(volume_controlled_audio, after=lambda e: logger.info("TTS playback complete."))
+                logger.info(f"Started playing audio in voice channel for message: '{message}' with volume={self.volume}")
             else:
                 logger.warning("Voice client is already playing audio.")
                 return
@@ -57,3 +67,11 @@ class TTSManager:
                 await asyncio.sleep(0.1)
         else:
             logger.warning("Voice client is not connected or TTS audio could not be generated.")
+
+    async def set_volume(self, new_volume):
+        """Set a new playback volume (0.0 to 1.0)."""
+        if 0.0 <= new_volume <= 1.0:
+            self.volume = new_volume
+            logger.info(f"Volume set to {self.volume}")
+        else:
+            logger.warning("Invalid volume level. Volume must be between 0.0 and 1.0.")
