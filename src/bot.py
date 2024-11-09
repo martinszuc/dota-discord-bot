@@ -38,28 +38,44 @@ game_timers = {}
 
 WEBHOOK_ID = os.getenv('WEBHOOK_ID')
 
+
 @bot.event
 async def on_message(message):
-    # Log message for troubleshooting
-    logger.info(f"Received message in channel {message.channel} from {message.author} with ID {message.webhook_id}: {message.content}")
+    # Log received message details for troubleshooting
+    logger.info(
+        f"Received message in channel {message.channel} from {message.author} with ID {message.webhook_id}: {message.content}")
 
     # Ignore messages from the bot itself to avoid command loops
     if message.author == bot.user:
         logger.info("Ignoring message from the bot itself.")
         return
 
+    # Check if message is from the specified webhook and contains a command
     if str(message.webhook_id) == WEBHOOK_ID and message.content.startswith(PREFIX):
-        message.author = await bot.fetch_user(bot.user.id)  # Temporary author assignment
-        await bot.process_commands(message)
-        logger.info("Command processed for webhook message.")
+        logger.info("Message is from the webhook and matches the command prefix.")
+
+        # Mock the author to have all permissions to bypass potential permission checks
+        message.author = type('User', (object,), {'guild_permissions': discord.Permissions.all()})()
+
+        # Attempt to process the message as a command
+        ctx = await bot.get_context(message)
+        logger.info(f"Context created for webhook message: {ctx.command}, valid: {ctx.valid}")
+
+        if ctx.valid:
+            try:
+                await bot.invoke(ctx)
+                logger.info("Webhook command invoked successfully.")
+            except Exception as e:
+                logger.error(f"Error while invoking command from webhook: {e}", exc_info=True)
+        else:
+            logger.warning("Webhook message did not create a valid command context.")
+
         return
 
     # Process regular user commands
     if message.content.startswith(PREFIX):
         logger.info("Processing user command.")
         await bot.process_commands(message)
-
-
 
 # Event: Bot is ready
 @bot.event
