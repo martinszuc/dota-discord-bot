@@ -504,20 +504,27 @@ async def list_events_command(ctx):
 
 # Graceful shutdown handling
 async def shutdown():
-    logger.info("Shutting down bot...")
-    # Stop all game timers
+    logger.info("Initiating bot shutdown...")
+
+    # Stop all game timers quickly
     for guild_id, timer in game_timers.items():
         if timer.is_running():
-            await timer.stop()
+            try:
+                await asyncio.wait_for(timer.stop(), timeout=2)  # Set a shorter timeout for each stop call
+            except asyncio.TimeoutError:
+                logger.warning(f"Timer for guild {guild_id} took too long to stop; forced stop.")
 
-    # Close the EventsManager session
+    # Disconnect all voice clients with a timeout
+    disconnect_tasks = [vc.disconnect() for vc in bot.voice_clients]
+    try:
+        await asyncio.wait_for(asyncio.gather(*disconnect_tasks), timeout=5)  # Disconnect all within 5 seconds
+    except asyncio.TimeoutError:
+        logger.warning("Some voice clients did not disconnect within the timeout.")
+
+    # Close the EventsManager session quickly
     events_manager.close()
 
-    # Disconnect all voice clients
-    for voice_client in bot.voice_clients:
-        await voice_client.disconnect()
-
-    await bot.close()  # Properly close aiohttp connector through bot's close method
+    await bot.close()  # Properly close the bot
     logger.info("Bot has been shut down.")
 
 # Handle termination signals for graceful shutdown
