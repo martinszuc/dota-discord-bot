@@ -1,7 +1,7 @@
 # roshan.py
 
 import asyncio
-from.config import logger
+from .config import logger
 
 class RoshanTimer:
     """Class to manage Roshan's respawn timer."""
@@ -58,7 +58,7 @@ class RoshanTimer:
             await self.game_timer.announce_message("Roshan timer has been cancelled.")
         finally:
             self.is_active = False
-            self.task = None  # Reset the task
+            self.task = None  # Reset the task when finished or cancelled
 
     async def cancel(self):
         """Cancel the Roshan respawn timer."""
@@ -68,9 +68,9 @@ class RoshanTimer:
                 try:
                     await self.task
                 except asyncio.CancelledError:
-                    pass
-                logger.info("Roshan timer cancelled.")
+                    logger.info("Roshan timer task was successfully cancelled.")
             self.is_active = False
+            self.task = None
+            logger.info("Roshan timer has been set to inactive.")
         else:
-            logger.info("Roshan timer is not active.")
-
+            logger.info("Roshan timer was not active.")
