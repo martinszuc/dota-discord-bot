@@ -4,7 +4,6 @@ import discord
 from discord.ext import commands, tasks
 import os
 import asyncio
-from aiohttp import web
 import logging
 import yaml
 import ctypes.util
@@ -22,7 +21,6 @@ with open("config.yaml", "r") as file:
 PREFIX = config.get("prefix", "!")
 TIMER_CHANNEL_NAME = config.get("timer_channel", "timer-bot")
 VOICE_CHANNEL_NAME = config.get("voice_channel", "DOTA")
-HTTP_SERVER_PORT = config.get("http_server_port", 8080)
 
 # Setup logging
 logging.basicConfig(
@@ -59,21 +57,7 @@ events_manager = EventsManager()
 game_timers = {}
 roshan_timers = {}
 
-
-# HTTP server setup using aiohttp
-async def handle(request):
-    return web.Response(text="Bot is running!")
-
-
-async def start_http_server():
-    app = web.Application()
-    app.router.add_get('/', handle)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', HTTP_SERVER_PORT)
-    await site.start()
-    logger.info(f"HTTP server started on port {HTTP_SERVER_PORT}")
-
+# Remove HTTP server setup using aiohttp
 
 # Event: Bot is ready
 @bot.event
@@ -520,15 +504,12 @@ signal.signal(signal.SIGTERM, lambda s, f: handle_signal(signal.Signals.SIGTERM)
 
 # Main entry point
 async def main():
-    # Start the HTTP server
-    await start_http_server()
     # Run the bot
     TOKEN = os.getenv('DISCORD_BOT_TOKEN')
     if not TOKEN:
         logger.error("Bot token not found. Please set the 'DISCORD_BOT_TOKEN' environment variable.")
         return
     await bot.start(TOKEN)
-
 
 if __name__ == "__main__":
     try:
