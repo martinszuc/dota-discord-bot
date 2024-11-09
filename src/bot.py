@@ -7,6 +7,7 @@ import signal
 
 import discord
 from discord.ext import commands
+from discord.message import Message
 
 from src.managers.event_manager import EventsManager
 from src.timer import GameTimer
@@ -71,13 +72,18 @@ async def on_message(message):
     if message.content.startswith(PREFIX):
         await bot.process_commands(message)
 
-async def create_mock_context(message):
+
+async def create_mock_context(message: Message):
     """Create a mock Context object for webhook messages."""
+    # Manually create a Command and prefix view if needed
+    view = commands.view.StringView(message.content)
+
     ctx = commands.Context(
         bot=bot,
         message=message,
         prefix=PREFIX,
         command=None,
+        view=view,
     )
     # Set guild and author to the bot's own guild and member
     ctx.guild = message.guild
