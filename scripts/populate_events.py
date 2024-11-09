@@ -1,5 +1,13 @@
 # scripts/populate_events.py
 
+import sys
+import os
+
+# Add the project root directory to sys.path
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database import StaticEvent, PeriodicEvent, Base
