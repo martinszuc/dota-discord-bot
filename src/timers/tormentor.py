@@ -6,6 +6,7 @@ from communication.announcement import Announcement
 from src.timers.base import BaseTimer
 from src.utils.config import logger
 
+
 class TormentorTimer(BaseTimer):
     """Class to handle the Tormentor respawn timer."""
 
@@ -15,9 +16,17 @@ class TormentorTimer(BaseTimer):
 
     async def _run_timer(self, channel):
         try:
-            await self.announcement.announce(self.game_timer, "Tormentor killed! Respawn timer started.")
-            await asyncio.sleep(10 * 60)  # 10 minutes
+            await self.announcement.announce(self.game_timer, "Tormentor killed!")
+            await asyncio.sleep(9 * 60)  # Wait 9 minutes
 
+            # 1-minute warning announcement
+            if not self.is_running:
+                return
+            await self.announcement.announce(self.game_timer, "Tormentor will respawn in 1 minute!")
+
+            await asyncio.sleep(1 * 60)  # Wait the remaining 1 minute
+
+            # Final respawn announcement
             if not self.is_running:
                 return
             await self.announcement.announce(self.game_timer, "Tormentor has respawned!")
