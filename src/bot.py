@@ -9,10 +9,10 @@ import discord
 import yaml
 from discord.ext import commands
 
-from event_manager import EventsManager
-from roshan import RoshanTimer
-from timer import GameTimer
-from utils import parse_time
+from .event_manager import EventsManager
+from .roshan import RoshanTimer
+from .timer import GameTimer
+from .utils import parse_time
 
 # Load configuration from config.yaml
 with open("../config/config.yaml", "r") as file:
