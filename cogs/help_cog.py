@@ -1,10 +1,10 @@
 # cogs/help_cog.py
 
-import discord
-from discord.ext import commands
 import logging
-import yaml
-import os
+
+from discord.ext import commands
+from src.utils.config import PREFIX
+
 
 class HelpCog(commands.Cog):
     """A Cog for handling the help command."""
@@ -12,10 +12,7 @@ class HelpCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.logger = logging.getLogger('DotaDiscordBot')
-        # Load configuration
-        with open("config.yaml", "r") as file:
-            config = yaml.safe_load(file)
-        self.prefix = config.get("prefix", "!")
+        self.prefix = PREFIX
 
     @commands.command(name="bot-help", aliases=['dota-help', 'dotahelp', 'pls', 'help'])
     async def bot_help_command(self, ctx):
