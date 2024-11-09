@@ -4,10 +4,11 @@ import os
 import yaml
 import logging
 
-# Define the path to the configuration file and logs directory
-CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "config.yaml")
-LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs")
-TTS_CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tts_cache")
+# Define the correct path to the configuration file and logs directory
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))  # This points to the main project directory
+CONFIG_PATH = os.path.join(BASE_DIR, "config", "config.yaml")
+LOG_DIR = os.path.join(BASE_DIR, "logs")
+TTS_CACHE_DIR = os.path.join(BASE_DIR, "tts_cache")
 
 # Load configuration data
 def load_config():
