@@ -60,14 +60,14 @@ class GameTimer:
         """Pause the game timer and all child timers."""
         self.paused = True
         self.pause_event.clear()
-        await self.events_manager.pause_all_events()
+        await self._pause_all_child_timers()
         logger.info("Game timer and all child timers paused.")
 
     async def unpause(self):
         """Unpause the game timer and all child timers."""
         self.paused = False
         self.pause_event.set()
-        await self.events_manager.resume_all_events()
+        await self._resume_all_child_timers()
         logger.info("Game timer and all child timers resumed.")
 
     @tasks.loop(seconds=1)
@@ -83,13 +83,6 @@ class GameTimer:
             await self._check_periodic_events()
         except Exception as e:
             logger.error(f"Error in timer_task: {e}", exc_info=True)
-
-    @tasks.loop(seconds=1)
-    async def auto_stop_task(self):
-        """Automatically stop the game after 1.5 hours."""
-        if self.time_elapsed >= 90 * 60:
-            await self.stop()
-            logger.info("Game timer automatically stopped after 1.5 hours.")
 
     async def _check_static_events(self):
         """Check and trigger static events."""
@@ -117,13 +110,13 @@ class GameTimer:
     async def _pause_all_child_timers(self):
         """Helper method to pause all child timers."""
         for timer in [self.roshan_timer, self.glyph_timer, self.tormentor_timer]:
-            if timer.is_running:
+            if timer.is_running and not timer.is_paused:
                 await timer.pause()
 
     async def _resume_all_child_timers(self):
         """Helper method to resume all child timers."""
         for timer in [self.roshan_timer, self.glyph_timer, self.tormentor_timer]:
-            if timer.is_paused:
+            if timer.is_running and timer.is_paused:
                 await timer.resume()
 
     def close(self):

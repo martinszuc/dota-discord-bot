@@ -243,7 +243,7 @@ async def pause_game(ctx):
         else:
             await game_timers[guild_id].pause()
             await ctx.send("Game timer paused.", tts=True)
-            logger.info(f"Game timer paused by {ctx.author}")
+            logger.info(f"Game timer and all child timers paused by {ctx.author}")
     else:
         await ctx.send("Game timer is not currently running.", tts=True)
         logger.warning(f"{ctx.author} attempted to pause the timer, but it was not running.")
@@ -261,7 +261,7 @@ async def unpause_game(ctx):
         else:
             await game_timers[guild_id].unpause()
             await ctx.send("Game timer resumed.", tts=True)
-            logger.info(f"Game timer resumed by {ctx.author}")
+            logger.info(f"Game timer and all child timers resumed by {ctx.author}")
     else:
         await ctx.send("Game timer is not currently running.", tts=True)
         logger.warning(f"{ctx.author} attempted to unpause the timer, but it was not running.")
