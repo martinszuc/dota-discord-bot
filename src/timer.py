@@ -1,7 +1,6 @@
 # timer.py
 
 import asyncio
-import logging
 import os
 import re
 import tempfile
@@ -12,8 +11,7 @@ from discord.ext import tasks
 
 from .event_manager import EventsManager
 from .roshan import RoshanTimer
-
-logger = logging.getLogger(__name__)
+from .config import logger
 
 class GameTimer:
     """Class to manage the game timer and events."""

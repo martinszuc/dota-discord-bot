@@ -1,7 +1,6 @@
 # bot.py
 import asyncio
 import ctypes.util
-import logging
 import os
 import signal
 
@@ -13,19 +12,7 @@ from .event_manager import EventsManager
 from .roshan import RoshanTimer
 from .timer import GameTimer
 from .utils import parse_time
-from .config import PREFIX, TIMER_CHANNEL_NAME, VOICE_CHANNEL_NAME
-
-
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
-    handlers=[
-        logging.FileHandler("../logs/bot.log"),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger('DotaDiscordBot')
+from .config import PREFIX, TIMER_CHANNEL_NAME, VOICE_CHANNEL_NAME, logger
 
 # Load Opus library for voice support
 opus_lib = ctypes.util.find_library('opus')

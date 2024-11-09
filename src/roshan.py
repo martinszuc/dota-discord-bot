@@ -1,9 +1,7 @@
 # roshan.py
 
 import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
+from.config import logger
 
 class RoshanTimer:
     """Class to manage Roshan's respawn timer."""
