@@ -7,7 +7,6 @@ import signal
 
 import discord
 from discord.ext import commands
-from discord.message import Message
 
 from src.managers.event_manager import EventsManager
 from src.timer import GameTimer
@@ -50,46 +49,26 @@ async def on_message(message):
         # Check if the message starts with the command prefix
         if message.content.startswith(PREFIX):
             logger.info("Processing webhook message as a command.")
-            # Manually parse the command and arguments
-            content = message.content[len(PREFIX):].strip()
-            if not content:
-                return
-            command_name, *args = content.split()
-            # Call the appropriate command function manually
-            if command_name == "start":
-                logger.info(f"Webhook command '!start' invoked with args: {args}")
-                # Create a mock Context object
-                ctx = await create_mock_context(message)
-                try:
-                    await start_game(ctx, *args)
-                    logger.info("start_game command executed successfully for webhook message.")
-                except Exception as e:
-                    logger.error(f"Error executing start_game command: {e}", exc_info=True)
-            # Add additional commands here as needed
+            # Create a context
+            ctx = await bot.get_context(message)
+            # Set the author to the bot's own member (the bot itself)
+            ctx.author = message.guild.me
+            # Process the command
+            try:
+                await bot.invoke(ctx)
+                logger.info("Webhook command processed successfully.")
+            except Exception as e:
+                logger.error(f"Error processing webhook command: {e}", exc_info=True)
         return
 
     # Process regular user commands
     if message.content.startswith(PREFIX):
-        await bot.process_commands(message)
+        try:
+            await bot.process_commands(message)
+            logger.info("User command processed successfully.")
+        except Exception as e:
+            logger.error(f"Error processing user command: {e}", exc_info=True)
 
-
-async def create_mock_context(message: Message):
-    """Create a mock Context object for webhook messages."""
-    # Manually create a Command and prefix view if needed
-    view = commands.view.StringView(message.content)
-
-    ctx = commands.Context(
-        bot=bot,
-        message=message,
-        prefix=PREFIX,
-        command=None,
-        view=view,
-    )
-    # Set guild and author to the bot's own guild and member
-    ctx.guild = message.guild
-    ctx.channel = message.channel
-    ctx.author = message.guild.me  # Set author to the bot's member object
-    return ctx
 
 # Event: Bot is ready
 @bot.event
@@ -217,8 +196,6 @@ async def start_game(ctx, countdown: str, *args):
     except ValueError:
         await ctx.send("Please enter a valid number for the countdown time.")
         logger.error("Countdown time provided was not an integer.")
-
-
 
 # Command: Stop game timer
 @bot.command(name="stop")
