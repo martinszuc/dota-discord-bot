@@ -33,9 +33,9 @@ class GameTimer:
         self.periodic_events = {}
 
     async def start(self, channel, countdown):
-        """Start the game timer."""
+        """Start the game timer with either a countdown or an elapsed time."""
         self.channel = channel
-        self.time_elapsed = -countdown
+        self.time_elapsed = -countdown if countdown < 0 else -countdown
         self.paused = False
         self.pause_event.set()
 

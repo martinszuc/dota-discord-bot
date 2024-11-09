@@ -141,7 +141,7 @@ async def load_cogs():
 @bot.command(name="start")
 async def start_game(ctx, countdown: str, *args):
     try:
-        # Convert countdown to an integer
+        # Convert countdown to an integer and allow negative values for post-start elapsed time
         countdown = int(countdown)
         logger.info(f"Inside start_game command: countdown={countdown}, args={args}, guild_id={ctx.guild.id}, channel={ctx.channel.name}")
 
@@ -152,17 +152,17 @@ async def start_game(ctx, countdown: str, *args):
 
         guild_id = ctx.guild.id
 
-        # Check if a timer is already running for this guild
+        # Check if a timer is already running for this guild to ensure only one timer per guild
         if guild_id in game_timers and game_timers[guild_id].is_running():
             await ctx.send("A game timer is already running in this server.", tts=True)
-            logger.info("A game timer is already running; start command ignored.")
+            logger.info(f"Game timer already running for guild ID {guild_id}. Start command ignored.")
             return
 
         # Find the voice channel
         dota_voice_channel = discord.utils.get(ctx.guild.voice_channels, name=VOICE_CHANNEL_NAME)
         if not dota_voice_channel:
             await ctx.send(f"'{VOICE_CHANNEL_NAME}' voice channel not found. Please create it and try again.", tts=True)
-            logger.warning(f"'{VOICE_CHANNEL_NAME}' voice channel not found.")
+            logger.warning(f"'{VOICE_CHANNEL_NAME}' voice channel not found in guild '{ctx.guild.name}'.")
             return
 
         # Get the timer text channel
@@ -173,8 +173,12 @@ async def start_game(ctx, countdown: str, *args):
             return
 
         # Announce the start of the game timer
-        await timer_text_channel.send(f"Starting {mode} game timer.")
-        logger.info(f"Starting game timer with mode={mode}.")
+        if countdown < 0:
+            await timer_text_channel.send(f"Starting {mode} game timer with an elapsed time of {-countdown} seconds.")
+            logger.info(f"Starting game timer with mode={mode} and elapsed time of {-countdown} seconds for guild ID {guild_id}.")
+        else:
+            await timer_text_channel.send(f"Starting {mode} game timer with a countdown of {countdown} seconds.")
+            logger.info(f"Starting game timer with mode={mode} and countdown={countdown} seconds for guild ID {guild_id}.")
 
         # Initialize and start the GameTimer
         game_timer = GameTimer(guild_id, mode)
@@ -189,13 +193,16 @@ async def start_game(ctx, countdown: str, *args):
             await voice_client.move_to(dota_voice_channel)
         game_timer.voice_client = voice_client
 
-        # Start the game timer
+        # Start the game timer with the specified countdown or elapsed time
         await game_timer.start(timer_text_channel, countdown)
-        logger.info(f"Game timer successfully started by {ctx.author} with countdown={countdown} and mode={mode}.")
+        logger.info(f"Game timer successfully started by {ctx.author} with countdown={countdown} and mode={mode} for guild ID {guild_id}.")
 
     except ValueError:
         await ctx.send("Please enter a valid number for the countdown time.")
-        logger.error("Countdown time provided was not an integer.")
+        logger.error(f"Invalid countdown time provided by {ctx.author}. Context: {ctx.message.content}")
+    except Exception as e:
+        logger.error(f"Error in start_game command: {e}", exc_info=True)
+        await ctx.send("An unexpected error occurred while starting the game timer.")
 
 # Command: Stop game timer
 @bot.command(name="stop")
