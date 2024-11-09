@@ -1,5 +1,5 @@
 import asyncio
-from .config import logger
+from src.utils.config import logger
 
 class RoshanTimer:
     """Class to manage Roshan's respawn timer."""

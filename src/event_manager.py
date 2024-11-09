@@ -1,9 +1,9 @@
 # event_manager.py
 
-from .config import logger
+from src.utils.config import logger
 from sqlalchemy.orm import sessionmaker
 from .database import StaticEvent, PeriodicEvent, engine
-from .event_definitions import regular_static_events, regular_periodic_events, turbo_static_events, turbo_periodic_events
+from src.utils.event_definitions import regular_static_events, regular_periodic_events, turbo_static_events, turbo_periodic_events
 
 # Create a configured "Session" class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

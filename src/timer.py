@@ -5,9 +5,9 @@ import asyncio
 import discord
 from discord.ext import tasks
 
-from .config import logger
+from src.utils.config import logger
 from .event_manager import EventsManager
-from .roshan import RoshanTimer
+from src.timers.roshan import RoshanTimer
 from .tts_manager import TTSManager
 
 # Initialize TTSManager once at the top level of your bot

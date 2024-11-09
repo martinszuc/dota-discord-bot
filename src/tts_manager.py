@@ -3,8 +3,8 @@ import hashlib
 import os
 import discord
 import re
-import edge_tts  # Make sure this is installed
-from .config import logger, TTS_CACHE_DIR
+import edge_tts
+from src.utils.config import logger, TTS_CACHE_DIR
 
 class TTSManager:
     """A class to manage TTS generation, caching, and playback in Discord voice channels."""

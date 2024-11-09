@@ -8,10 +8,11 @@ import discord
 from discord.ext import commands
 
 from .event_manager import EventsManager
-from .roshan import RoshanTimer
+from src.timers.roshan import RoshanTimer
+from src.timers.glyph import GlyphTimer
 from .timer import GameTimer
-from .utils import parse_time
-from .config import PREFIX, TIMER_CHANNEL_NAME, VOICE_CHANNEL_NAME, logger
+from src.utils.utils import parse_time
+from src.utils.config import PREFIX, TIMER_CHANNEL_NAME, VOICE_CHANNEL_NAME, logger
 
 # Load Opus library for voice support
 opus_lib = ctypes.util.find_library('opus')
@@ -33,9 +34,10 @@ bot = commands.Bot(command_prefix=PREFIX, intents=intents, help_command=None)
 # Instantiate EventsManager
 events_manager = EventsManager()
 
-# Data structures to keep track of timers and Roshan timers per guild
+# Data structures to keep track of game, Roshan, and Glyph timers per guild
 game_timers = {}
 roshan_timers = {}
+glyph_timers = {}
 
 # Event: Bot is ready
 @bot.event
@@ -239,44 +241,68 @@ async def unpause_game(ctx):
 
 
 # Command: Roshan timer
-@bot.command(name="rosh", aliases=['rs', 'rsdead', 'rs-dead', 'rsdied', 'rs-died'])
+@bot.command(name="rosh", aliases=['rs', 'rsdead'])
 async def rosh_timer_command(ctx):
     """Log Roshan's death and start the respawn timer."""
     logger.info(f"Command '!rosh' invoked by {ctx.author}")
     guild_id = ctx.guild.id
     if guild_id not in game_timers or not game_timers[guild_id].is_running():
         await ctx.send("Game is not active.", tts=True)
-        logger.warning(f"Roshan timer attempted by {ctx.author} but game is not active.")
         return
 
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
+        if guild_id not in roshan_timers:
+            roshan_timers[guild_id] = RoshanTimer(game_timers[guild_id])
         await roshan_timers[guild_id].start(timer_channel)
         logger.info(f"Roshan timer started by {ctx.author}")
     else:
         await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", tts=True)
-        logger.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
+
+@bot.command(name='cancel-rosh', aliases=['rsalive', 'rsback'])
+async def cancel_rosh_command(ctx):
+    """Cancel the Roshan respawn timer."""
+    guild_id = ctx.guild.id
+    timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
+    if guild_id in roshan_timers:
+        await roshan_timers[guild_id].cancel()
+        await timer_channel.send("Roshan timer has been cancelled.")
+        logger.info(f"Roshan timer cancelled by {ctx.author}")
+    else:
+        await ctx.send("No active Roshan timer to cancel.", tts=True)
 
 
 # Command: Glyph cooldown timer
 @bot.command(name="glyph", aliases=['g'])
-async def glyph_timer(ctx):
-    """Start a 5-minute timer for the enemy's glyph cooldown."""
+async def glyph_timer_command(ctx):
+    """Start the Glyph cooldown timer."""
     logger.info(f"Command '!glyph' invoked by {ctx.author}")
     guild_id = ctx.guild.id
     if guild_id not in game_timers or not game_timers[guild_id].is_running():
         await ctx.send("Game is not active.", tts=True)
-        logger.warning(f"Glyph timer attempted by {ctx.author} but game is not active.")
         return
 
     timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if timer_channel:
-        await timer_channel.send("Enemy glyph used! Starting 5-minute cooldown timer.")
-        await game_timers[guild_id].start_glyph_timer(timer_channel)
+        if guild_id not in glyph_timers:
+            glyph_timers[guild_id] = GlyphTimer(game_timers[guild_id])
+        await glyph_timers[guild_id].start(timer_channel)
         logger.info(f"Glyph timer started by {ctx.author}")
     else:
         await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", tts=True)
         logger.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
+
+@bot.command(name="cancel-glyph", aliases=['cg'])
+async def cancel_glyph_command(ctx):
+    """Cancel the Glyph cooldown timer."""
+    guild_id = ctx.guild.id
+    timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
+    if guild_id in glyph_timers:
+        await glyph_timers[guild_id].cancel()
+        await timer_channel.send("Glyph timer has been cancelled.")
+        logger.info(f"Glyph timer cancelled by {ctx.author}")
+    else:
+        await ctx.send("No active Glyph timer to cancel.", tts=True)
 
 
 # Command: Add custom event
@@ -396,28 +422,6 @@ async def list_events_command(ctx):
     # Send the embed message with the events list
     await ctx.send(embed=embed)
     logger.info(f"Events listed for guild '{ctx.guild.name}' (ID: {guild_id})")
-
-
-@bot.command(name='cancel-rosh', aliases=['rsalive', 'rsback', 'rs-cancel', 'rs-back', 'rs-alive', 'rsb'])
-async def cancel_rosh_command(ctx):
-    """Cancel the Roshan respawn timer."""
-    logger.info(f"Command '!cancel-rosh' invoked by {ctx.author}")
-    guild_id = ctx.guild.id
-    if guild_id not in game_timers or not game_timers[guild_id].is_running():
-        await ctx.send("Game is not active.", tts=True)
-        logger.warning(f"Roshan timer cancel attempted by {ctx.author} but game is not active.")
-        return
-
-    timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
-    if timer_channel:
-        # Reset Roshan timer
-        roshan_timer = roshan_timers[guild_id]
-        await roshan_timer.cancel()
-        await timer_channel.send("Roshan timer has been cancelled and reset.")
-        logger.info(f"Roshan timer cancelled and reset by {ctx.author}")
-    else:
-        await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", tts=True)
-        logger.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
 # Graceful shutdown handling
 async def shutdown():
