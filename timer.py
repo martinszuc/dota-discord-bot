@@ -48,7 +48,8 @@ class GameTimer:
 
         # Load events from database
         events_manager = EventsManager()
-        self.static_events, self.periodic_events = events_manager.get_events(self.guild_id, self.mode)
+        self.static_events = events_manager.get_static_events(self.guild_id, self.mode)
+        self.periodic_events = events_manager.get_periodic_events(self.guild_id, self.mode)
         events_manager.close()
 
         # Start the timer task if not already running
