@@ -3,10 +3,8 @@ import asyncio
 import ctypes.util
 import os
 import signal
-
 import discord
 from discord.ext import commands
-
 from src.event_manager import EventsManager
 from src.timers.roshan import RoshanTimer
 from src.timers.glyph import GlyphTimer
@@ -430,8 +428,7 @@ async def shutdown():
     # Disconnect all voice clients
     for voice_client in bot.voice_clients:
         await voice_client.disconnect()
-    # Close the bot
-    await bot.close()
+    await bot.close()  # Properly close aiohttp connector through bot's close method
     logger.info("Bot has been shut down.")
 
 # Handle termination signals for graceful shutdown
@@ -445,7 +442,6 @@ signal.signal(signal.SIGTERM, lambda s, f: handle_signal(signal.Signals.SIGTERM)
 
 # Main entry point
 async def main():
-    # Run the bot
     token = os.getenv('DISCORD_BOT_TOKEN')
     if not token:
         logger.error("Bot token not found. Please set the 'DISCORD_BOT_TOKEN' environment variable.")
