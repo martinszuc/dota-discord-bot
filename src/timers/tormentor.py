@@ -22,7 +22,7 @@ class TormentorTimer:
             return
         self.is_running = True
         self.logger.info("Tormentor timer started.")
-        await self.announcement.announce(self.game_timer, "Tormentor has been killed! Respawn timer started for 10 minutes.")
+        await self.announcement.announce(self.game_timer, "Tormentor has been killed!.")
         self.task = asyncio.create_task(self._run_timer(channel))
 
     async def _run_timer(self, channel):

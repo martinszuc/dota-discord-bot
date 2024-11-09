@@ -1,11 +1,9 @@
 # cogs/help_cog.py
 
 import logging
-
+import discord
 from discord.ext import commands
-
 from src.utils.config import PREFIX
-
 
 class HelpCog(commands.Cog):
     """A Cog for handling the help command."""
@@ -19,64 +17,83 @@ class HelpCog(commands.Cog):
     async def send_help(self, ctx):
         """Show available commands with examples."""
         self.logger.info(f"Command '!bot-help' invoked by {ctx.author}")
-        help_message = f"""
-**Dota Timer Bot - Help**
 
-- `{self.prefix}start <countdown> [mode] [mention]`
-  - Starts the game timer with a countdown. Add 'mention' to mention players.
-  - **mode** can be 'regular' or 'turbo'. Defaults to 'regular'.
-  - **Example:** `{self.prefix}start 180` or `{self.prefix}start 180 turbo mention`
+        embed = discord.Embed(title="Dota Timer Bot - Help", color=0x00ff00)
 
-- `{self.prefix}stop`
-  - Stops the current game timer.
-  - **Example:** `{self.prefix}stop`
+        categories = {
+            "📅 **Game Timer**": [
+                {
+                    "name": f"{self.prefix}start <countdown [sec]> [mode]]",
+                    "value": "Starts the game timer.\n**Example:** `{0}start 45` or `{0}start 60 turbo`".format(self.prefix)
+                },
+                {
+                    "name": f"{self.prefix}stop",
+                    "value": "Stops the current game timer."
+                },
+                {
+                    "name": f"{self.prefix}pause` *(Alias: `p`)*",
+                    "value": "Pauses the game timer and all events."
+                },
+                {
+                    "name": f"{self.prefix}unpause` *(Alias: `unp`)*",
+                    "value": "Resumes the game timer and all events."
+                }
+            ],
+            "🛡️ **Roshan Timer**": [
+                {
+                    "name": f"{self.prefix}rosh` *(Aliases: `rs`, `rsdead`, `rs-dead`, `rsdied`, `rs-died`)*",
+                    "value": "Logs Roshan's death and starts the respawn timer.\n**Example:** `{0}rosh`".format(self.prefix)
+                },
+                {
+                    "name": f"{self.prefix}cancel-rosh` *(Aliases: `rsalive`, `rsback`, `rs-cancel`, `rs-back`, `rs-alive`, `rsb`)*",
+                    "value": "Cancels the Roshan respawn timer if active.\n**Example:** `{0}cancel-rosh`".format(self.prefix)
+                }
+            ],
+            "🔮 **Glyph Timer**": [
+                {
+                    "name": f"{self.prefix}glyph` *(Alias: `g`)*",
+                    "value": "Starts a 5-minute cooldown timer for the enemy's glyph.\n**Example:** `{0}glyph`".format(self.prefix)
+                },
+                {
+                    "name": f"{self.prefix}cancel-glyph` *(Aliases: `cg`)*",
+                    "value": "Cancels the Glyph cooldown timer.\n**Example:** `{0}cancel-glyph`".format(self.prefix)
+                }
+            ],
+            "🐉 **Tormentor Timer**": [
+                {
+                    "name": f"{self.prefix}tormentor` *(Aliases: `tm`, `torm`, `t`)*",
+                    "value": "Logs Tormentor's death and starts the respawn timer.\n**Example:** `{0}tormentor`".format(self.prefix)
+                }
+            ],
+            "⚙️ **Custom Events**": [
+                {
+                    "name": f"{self.prefix}add-event <type> <parameters>",
+                    "value": "Adds a custom event.\n**Static:** `{0}add-event static 10:00 \"Siege Creep incoming!\"`\n**Periodic:** `{0}add-event periodic 05:00 02:00 20:00 \"Bounty Runes soon!\"`".format(self.prefix)
+                },
+                {
+                    "name": f"{self.prefix}remove-event <event_id>",
+                    "value": "Removes a custom event by its ID.\n**Example:** `{0}remove-event 3`".format(self.prefix)
+                },
+                {
+                    "name": f"{self.prefix}list-events` *(Aliases: `ls`, `events`)*",
+                    "value": "Lists all custom events.\n**Example:** `{0}list-events`".format(self.prefix)
+                }
+            ],
+            "ℹ️ **General**": [
+                {
+                    "name": f"{self.prefix}bot-help` *(Aliases: `dota-help`, `dotahelp`, `pls`, `help`)*",
+                    "value": "Shows this help message.\n**Example:** `{0}bot-help`".format(self.prefix)
+                }
+            ]
+        }
 
-- `{self.prefix}pause` *(Alias: `p`)*
-  - Pauses the game timer and all events.
-  - **Example:** `{self.prefix}pause`
+        for category, commands_list in categories.items():
+            value = ""
+            for cmd in commands_list:
+                value += f"**{cmd['name']}**\n{cmd['value']}\n\n"
+            embed.add_field(name=category, value=value, inline=False)
 
-- `{self.prefix}unpause` *(Alias: `unp`)*
-  - Resumes the game timer and all events.
-  - **Example:** `{self.prefix}unpause`
-
-- `{self.prefix}rosh` *(Aliases: `rs`, `rsdead`, `rs-dead`, `rsdied`, `rs-died`)*
-  - Logs Roshan's death and starts the respawn timer.
-  - **Example:** `{self.prefix}rosh`
-
-- `{self.prefix}cancel-rosh` *(Aliases: `rsalive`, `rsback`, `rs-cancel`, `rs-back`, `rs-alive`, `rsb`)*
-  - Cancels the Roshan respawn timer if it's active.
-  - **Example:** `{self.prefix}cancel-rosh`
-
-- `{self.prefix}glyph` *(Alias: `g`)*
-  - Starts a 5-minute cooldown timer for the enemy's glyph.
-  - **Example:** `{self.prefix}glyph`
-  
-- `{self.prefix}cancel-glyph` *(Aliases: `cg`)*
-  - Cancels the Glyph cooldown timer.
-  - **Example:** `{self.prefix}cancel-glyph`
-  
-- `{self.prefix}tormentor` *(Aliases: `tm`, `torm`)*
-  - Logs Tormentor's death and starts the respawn timer.
-  - **Example:** `{self.prefix}tormentor`
-
-- `{self.prefix}add-event <type> <parameters>`
-  - Adds a custom event.
-  - **Static Event Example:** `{self.prefix}add-event static 10:00 "Siege Creep incoming!"`
-  - **Periodic Event Example:** `{self.prefix}add-event periodic 05:00 02:00 20:00 "Bounty Runes soon!"`
-
-- `{self.prefix}remove-event <event_id>`
-  - Removes a custom event by its ID.
-  - **Example:** `{self.prefix}remove-event 3`
-
-- `{self.prefix}list-events` *(Aliases: `ls`, `events`)*
-  - Lists all custom events.
-  - **Example:** `{self.prefix}list-events`
-
-- `{self.prefix}bot-help` *(Aliases: `dota-help`, `dotahelp`, `pls`, `help`)*
-  - Shows this help message.
-  - **Example:** `{self.prefix}bot-help`
-        """
-        await ctx.send(help_message, tts=True)
+        await ctx.send(embed=embed)
         self.logger.info(f"Help message sent to {ctx.author}")
 
 async def setup(bot):
