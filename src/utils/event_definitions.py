@@ -3,7 +3,7 @@
 from src.utils.utils import min_to_sec
 
 regular_static_events = [
-    {"mode": "regular", "time": min_to_sec("00:00"), "message": "Game has started"},
+    {"mode": "regular", "time": min_to_sec("00:01"), "message": "Game has started"},
 # Creeps
     {"mode": "regular", "time": min_to_sec("01:40"), "message": "First Flagbearer in 20 seconds!"},
     {"mode": "regular", "time": min_to_sec("02:30"), "message": "Glyph in 30 seconds!"},
@@ -35,7 +35,7 @@ regular_periodic_events = [
 ]
 
 turbo_static_events = [
-    {"mode": "turbo", "time": min_to_sec("00:00"), "message": "Game has started"},
+    {"mode": "turbo", "time": min_to_sec("00:01"), "message": "Game has started"},
 # Neutrals
     {"mode": "turbo", "time": min_to_sec("16:40"), "message": "New neutral items!"},
     {"mode": "turbo", "time": min_to_sec("27:16"), "message": "New neutral items!"},
