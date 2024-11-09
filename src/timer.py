@@ -59,9 +59,6 @@ class GameTimer:
         self.paused = False
         logger.info("Game timer stopped.")
 
-        # Announce stop message
-        await self.announcement_manager.announce(self, "Game timer stopped.")
-
         # Stop all child timers
         await asyncio.gather(
             self.roshan_timer.stop(),
@@ -133,7 +130,6 @@ class GameTimer:
         if self.time_elapsed >= 90 * 60:
             await self.stop()
             logger.info("Game timer automatically stopped after 1.5 hours.")
-            await self.announcement_manager.announce(self, "Game timer automatically stopped after 1.5 hours.")
 
     async def _check_static_events(self):
         """Check and trigger static events."""

@@ -39,6 +39,5 @@ class RoshanTimer(BaseTimer):
 
         except asyncio.CancelledError:
             logger.info("Roshan timer cancelled.")
-            await self.announcement.announce(self.game_timer, "Roshan timer cancelled.")
         finally:
             self.is_running = False
