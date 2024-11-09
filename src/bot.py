@@ -135,12 +135,9 @@ async def load_cogs():
 # Command: Start game timer
 @bot.command(name="start")
 async def start_game(ctx, countdown: int, *args):
-    """Start the game timer with a countdown and optionally specify mode."""
-    logger.info(f"Command '!start' invoked by {ctx.author} with countdown={countdown} and args={args}")
+    logger.info(f"Executing 'start' command with countdown={countdown} and args={args}")
 
     mode = 'regular'
-
-    # Parse arguments
     for arg in args:
         if arg.lower() in ['regular', 'turbo']:
             mode = arg.lower()
@@ -150,6 +147,7 @@ async def start_game(ctx, countdown: int, *args):
     # Check if a timer is already running for this guild
     if guild_id in game_timers and game_timers[guild_id].is_running():
         await ctx.send("A game timer is already running in this server.", tts=True)
+        logger.info("A game timer is already running; start command ignored.")
         return
 
     # Find the voice channel
@@ -168,11 +166,11 @@ async def start_game(ctx, countdown: int, *args):
 
     # Announce the start of the game timer
     await timer_text_channel.send(f"Starting {mode} game timer.")
+    logger.info(f"Starting game timer with mode={mode}.")
 
     # Initialize and start the GameTimer
     game_timer = GameTimer(guild_id, mode)
-    game_timer.channel = timer_text_channel  # Set the timer_channel for announcements
-    game_timer.voice_client = None
+    game_timer.channel = timer_text_channel
     game_timers[guild_id] = game_timer
 
     # Connect to the voice channel
@@ -185,7 +183,7 @@ async def start_game(ctx, countdown: int, *args):
 
     # Start the game timer
     await game_timer.start(timer_text_channel, countdown)
-    logger.info(f"Game timer started by {ctx.author} with countdown={countdown} and mode={mode}.")
+    logger.info(f"Game timer successfully started by {ctx.author} with countdown={countdown} and mode={mode}.")
 
 # Command: Stop game timer
 @bot.command(name="stop")
