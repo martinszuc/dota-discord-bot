@@ -1,6 +1,6 @@
 # event_definitions.py
 
-from utils import min_to_sec
+from src.utils.utils import min_to_sec
 
 regular_static_events = [
     {"mode": "regular", "time": min_to_sec("00:00"), "message": "Game has started"},
