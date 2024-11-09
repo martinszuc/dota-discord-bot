@@ -59,9 +59,11 @@ events_manager = EventsManager()
 game_timers = {}
 roshan_timers = {}
 
+
 # HTTP server setup using aiohttp
 async def handle(request):
     return web.Response(text="Bot is running!")
+
 
 async def start_http_server():
     app = web.Application()
@@ -71,6 +73,7 @@ async def start_http_server():
     site = web.TCPSite(runner, '0.0.0.0', HTTP_SERVER_PORT)
     await site.start()
     logger.info(f"HTTP server started on port {HTTP_SERVER_PORT}")
+
 
 # Event: Bot is ready
 @bot.event
@@ -84,13 +87,25 @@ async def on_ready():
         else:
             logger.info(f"Channel '{TIMER_CHANNEL_NAME}' found in guild '{guild.name}'.")
 
+
 # Event: Bot joins a new guild
 @bot.event
 async def on_guild_join(guild):
+    """Initialize events for a guild only if they don't already exist."""
     logger.info(f"Bot joined new guild: {guild.name} (ID: {guild.id})")
+
+    # Check if this guild already has events
     if not events_manager.guild_has_events(guild.id):
         events_manager.populate_events_for_guild(guild.id)
         logger.info(f"Populated events for new guild: {guild.name}")
+    else:
+        logger.info(f"Guild '{guild.name}' (ID: {guild.id}) already has events, skipping initialization.")
+
+    # Send a welcome message to the system channel or the first text channel if available
+    channel = guild.system_channel or next(
+        (chan for chan in guild.text_channels if chan.permissions_for(guild.me).send_messages), None)
+    if channel:
+        await channel.send("Dota Timer Bot has been added to this server! Type `!bot-help` to get started.")
 
 
 # Event: Command errors
@@ -112,11 +127,14 @@ async def on_command_error(ctx, error):
         await ctx.send("An unexpected error occurred.", tts=True)
         logger.error(f"Unhandled error in command '{ctx.command}': {error}", exc_info=True)
 
+
 # Check: Admin permissions
 def is_admin():
     def predicate(ctx):
         return ctx.author.guild_permissions.administrator
+
     return commands.check(predicate)
+
 
 # Command: Start game timer
 @bot.command(name="start")
@@ -187,7 +205,9 @@ async def start_game(ctx, countdown: int, *args):
 
     # Start the game timer
     await game_timer.start(timer_text_channel, countdown, players_in_channel, mention_users)
-    logger.info(f"Game timer started by {ctx.author} with countdown={countdown}, mode={mode}, and players={player_names}")
+    logger.info(
+        f"Game timer started by {ctx.author} with countdown={countdown}, mode={mode}, and players={player_names}")
+
 
 # Command: Stop game timer
 @bot.command(name="stop")
@@ -217,6 +237,7 @@ async def stop_game(ctx):
     else:
         logger.warning("Voice client was not connected.")
 
+
 # Command: Pause game timer
 @bot.command(name="pause")
 async def pause_game(ctx):
@@ -234,6 +255,7 @@ async def pause_game(ctx):
     else:
         await ctx.send("Game timer is not currently running.", tts=True)
         logger.warning(f"{ctx.author} attempted to pause the timer, but it was not running.")
+
 
 # Command: Unpause game timer
 @bot.command(name="unpause")
@@ -253,9 +275,10 @@ async def unpause_game(ctx):
         await ctx.send("Game timer is not currently running.", tts=True)
         logger.warning(f"{ctx.author} attempted to unpause the timer, but it was not running.")
 
+
 # Command: Roshan timer
 @bot.command(name="rosh")
-async def rosh_timer(ctx):
+async def rosh_timer_command(ctx):
     """Log Roshan's death and start the respawn timer."""
     logger.info(f"Command '!rosh' invoked by {ctx.author}")
     guild_id = ctx.guild.id
@@ -271,6 +294,7 @@ async def rosh_timer(ctx):
     else:
         await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", tts=True)
         logger.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
+
 
 # Command: Glyph cooldown timer
 @bot.command(name="glyph")
@@ -292,6 +316,7 @@ async def glyph_timer(ctx):
         await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", tts=True)
         logger.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
+
 # Command: Add custom event
 @bot.command(name="add-event")
 @is_admin()
@@ -299,15 +324,16 @@ async def add_event_command(ctx, event_type: str, *args):
     """
     Add a custom event.
     Usage:
-    - For static events: !add-event static <time> <message>
-    - For periodic events: !add-event periodic <start_time> <interval> <end_time> <message>
+    - For static events: !add-event static <MM:SS> <message>
+    - For periodic events: !add-event periodic <MM:SS> <MM:SS> <MM:SS> <message>
     """
     logger.info(f"Command '!add-event' invoked by {ctx.author} with event_type={event_type} and args={args}")
     guild_id = ctx.guild.id
     try:
         if event_type.lower() == 'static':
             if len(args) < 2:
-                await ctx.send("Insufficient arguments for static event. Usage: `!add-event static <MM:SS> <message>`", tts=True)
+                await ctx.send("Insufficient arguments for static event. Usage: `!add-event static <MM:SS> <message>`",
+                               tts=True)
                 return
             time_str = args[0]
             message = ' '.join(args[1:])
@@ -317,7 +343,9 @@ async def add_event_command(ctx, event_type: str, *args):
             logger.info(f"Static event added with ID {event_id} by {ctx.author}")
         elif event_type.lower() == 'periodic':
             if len(args) < 4:
-                await ctx.send("Insufficient arguments for periodic event. Usage: `!add-event periodic <MM:SS> <MM:SS> <MM:SS> <message>`", tts=True)
+                await ctx.send(
+                    "Insufficient arguments for periodic event. Usage: `!add-event periodic <MM:SS> <MM:SS> <MM:SS> <message>`",
+                    tts=True)
                 return
             start_time_str = args[0]
             interval_str = args[1]
@@ -339,6 +367,7 @@ async def add_event_command(ctx, event_type: str, *args):
         await ctx.send(f"Error adding event: {e}", tts=True)
         logger.error(f"Error adding event by {ctx.author}: {e}", exc_info=True)
 
+
 # Command: Remove custom event
 @bot.command(name="remove-event")
 @is_admin()
@@ -357,6 +386,7 @@ async def remove_event_command(ctx, event_id: int):
     except Exception as e:
         await ctx.send(f"Error removing event: {e}", tts=True)
         logger.error(f"Error removing event ID {event_id} by {ctx.author}: {e}", exc_info=True)
+
 
 # Command: List custom events
 @bot.command(name="list-events")
@@ -406,6 +436,60 @@ async def list_events_command(ctx):
     logger.info(f"Events listed for guild '{ctx.guild.name}' (ID: {guild_id})")
 
 
+# Command: Help
+@bot.command(name="bot-help")
+async def bot_help_command(ctx):
+    """Show available commands with examples."""
+    logger.info(f"Command '!bot-help' invoked by {ctx.author}")
+    help_message = f"""
+**Dota Timer Bot - Help**
+
+- `{PREFIX}start <countdown> [mode] [mention]`
+  - Starts the game timer with a countdown. Add 'mention' to mention players.
+  - **mode** can be 'regular' or 'turbo'. Defaults to 'regular'.
+  - **Example:** `{PREFIX}start 180` or `{PREFIX}start 180 turbo mention`
+
+- `{PREFIX}stop`
+  - Stops the current game timer.
+  - **Example:** `{PREFIX}stop`
+
+- `{PREFIX}pause`
+  - Pauses the game timer and all events.
+  - **Example:** `{PREFIX}pause`
+
+- `{PREFIX}unpause`
+  - Resumes the game timer and all events.
+  - **Example:** `{PREFIX}unpause`
+
+- `{PREFIX}rosh`
+  - Logs Roshan's death and starts an 8-minute respawn timer.
+  - **Example:** `{PREFIX}rosh`
+
+- `{PREFIX}glyph`
+  - Starts a 5-minute cooldown timer for the enemy's glyph.
+  - **Example:** `{PREFIX}glyph`
+
+- `{PREFIX}add-event <type> <parameters>`
+  - Adds a custom event.
+  - **Static Event Example:** `{PREFIX}add-event static 10:00 "Siege Creep incoming!"`
+  - **Periodic Event Example:** `{PREFIX}add-event periodic 05:00 02:00 20:00 "Bounty Runes soon!"`
+
+- `{PREFIX}remove-event <event_id>`
+  - Removes a custom event by its ID.
+  - **Example:** `{PREFIX}remove-event 3`
+
+- `{PREFIX}list-events`
+  - Lists all custom events.
+  - **Example:** `{PREFIX}list-events`
+
+- `{PREFIX}bot-help`
+  - Shows this help message.
+  - **Example:** `{PREFIX}bot-help`
+    """
+    await ctx.send(help_message)
+    logger.info(f"Help message sent to {ctx.author}")
+
+
 # Graceful shutdown handling
 async def shutdown():
     logger.info("Shutting down bot...")
@@ -422,14 +506,17 @@ async def shutdown():
     await bot.close()
     logger.info("Bot has been shut down.")
 
+
 # Handle termination signals for graceful shutdown
 def handle_signal(sig):
     logger.info(f"Received exit signal {sig.name}...")
     asyncio.create_task(shutdown())
 
+
 # Register signal handlers
 signal.signal(signal.SIGINT, lambda s, f: handle_signal(signal.Signals.SIGINT))
 signal.signal(signal.SIGTERM, lambda s, f: handle_signal(signal.Signals.SIGTERM))
+
 
 # Main entry point
 async def main():
@@ -441,6 +528,7 @@ async def main():
         logger.error("Bot token not found. Please set the 'DISCORD_BOT_TOKEN' environment variable.")
         return
     await bot.start(TOKEN)
+
 
 if __name__ == "__main__":
     try:
