@@ -102,3 +102,11 @@ class GameTimer:
     def close(self):
         """Clean up resources."""
         self.events_manager.close()
+
+    def is_running(self):
+        """Check if the game timer is running."""
+        return self.timer_task.is_running()
+
+    def is_paused(self):
+        """Check if the game timer is paused."""
+        return self.paused
