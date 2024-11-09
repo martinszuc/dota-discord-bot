@@ -10,8 +10,9 @@ class TTSManager:
     """A class to manage TTS generation, caching, and playback in Discord voice channels."""
 
     # def __init__(self, voice="en-US-AriaNeural", volume=0.5):
-    def __init__(self, voice="en-GB-LibbyNeural", volume=0.5):
+    def __init__(self, voice="en-US-AriaNeural", rate="-15%", volume=0.5):
         self.voice = voice
+        self.rate = rate  # Default rate for a slower pace
         self.volume = volume  # Default volume (0.0 to 1.0)
         os.makedirs(TTS_CACHE_DIR, exist_ok=True)
 
