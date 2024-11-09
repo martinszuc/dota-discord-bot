@@ -228,7 +228,7 @@ async def pause_game(ctx):
         logger.warning(f"{ctx.author} attempted to pause the timer, but it was not running.")
 
 # Command: Unpause game timer
-@bot.command(name="unpause", aliases=['unp'])
+@bot.command(name="unpause", aliases=['unp', 'up'])
 async def unpause_game(ctx):
     """Resume the game timer and all events."""
     logger.info(f"Command '!unpause' invoked by {ctx.author}")
@@ -271,7 +271,7 @@ async def rosh_timer_command(ctx):
         logger.warning(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
 
 # Command: Cancel Roshan timer
-@bot.command(name='cancel-rosh', aliases=['rsalive', 'rsback'])
+@bot.command(name='cancel-rosh', aliases=['rsalive', 'rsback', 'rsb'])
 async def cancel_rosh_command(ctx):
     """Cancel the Roshan respawn timer."""
     logger.info(f"Command '!cancel-rosh' invoked by {ctx.author}")

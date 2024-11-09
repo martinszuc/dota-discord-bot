@@ -35,7 +35,7 @@ class HelpCog(commands.Cog):
                     "value": "Pauses the game timer and all events."
                 },
                 {
-                    "name": f"{self.prefix}unpause` *(Alias: `unp`)*",
+                    "name": f"{self.prefix}unpause` *(Alias: `unp`, `up`)*",
                     "value": "Resumes the game timer and all events."
                 }
             ],
@@ -45,7 +45,7 @@ class HelpCog(commands.Cog):
                     "value": "Logs Roshan's death and starts the respawn timer.\n**Example:** `{0}rosh`".format(self.prefix)
                 },
                 {
-                    "name": f"{self.prefix}cancel-rosh` *(Aliases: `rsalive`, `rsback`, `rs-cancel`, `rs-back`, `rs-alive`, `rsb`)*",
+                    "name": f"{self.prefix}cancel-rosh` *(Aliases: 'rsalive', 'rsback', 'rsb')*",
                     "value": "Cancels the Roshan respawn timer if active.\n**Example:** `{0}cancel-rosh`".format(self.prefix)
                 }
             ],
