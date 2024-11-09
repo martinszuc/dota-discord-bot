@@ -6,11 +6,11 @@ import os
 import signal
 import discord
 from discord.ext import commands
-from src.event_manager import EventsManager
+from src.managers.event_manager import EventsManager
 from src.timers.roshan import RoshanTimer
 from src.timers.glyph import GlyphTimer
 from src.timer import GameTimer
-from src.utils.utils import parse_time
+from src.utils.utils import min_to_sec
 from src.utils.config import PREFIX, TIMER_CHANNEL_NAME, VOICE_CHANNEL_NAME, logger
 
 # Load Opus library for voice support
@@ -334,7 +334,7 @@ async def add_event_command(ctx, event_type: str, *args):
                 return
             time_str = args[0]
             message = ' '.join(args[1:])
-            time_seconds = parse_time(time_str)
+            time_seconds = min_to_sec(time_str)
             event_id = events_manager.add_static_event(guild_id, time_seconds, message)
             await ctx.send(f"Static event added with ID {event_id}.", tts=True)
             logger.info(f"Static event added with ID {event_id} by {ctx.author}")
@@ -346,9 +346,9 @@ async def add_event_command(ctx, event_type: str, *args):
             interval_str = args[1]
             end_time_str = args[2]
             message = ' '.join(args[3:])
-            start_time = parse_time(start_time_str)
-            interval = parse_time(interval_str)
-            end_time = parse_time(end_time_str)
+            start_time = min_to_sec(start_time_str)
+            interval = min_to_sec(interval_str)
+            end_time = min_to_sec(end_time_str)
             event_id = events_manager.add_periodic_event(guild_id, start_time, interval, end_time, message)
             await ctx.send(f"Periodic event added with ID {event_id}.", tts=True)
             logger.info(f"Periodic event added with ID {event_id} by {ctx.author}")

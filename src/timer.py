@@ -6,7 +6,7 @@ from discord.ext import tasks
 
 from communication import Announcement
 from src.utils.config import logger
-from .event_manager import EventsManager
+from src.managers.event_manager import EventsManager
 from .timers.glyph import GlyphTimer
 from .timers.roshan import RoshanTimer
 
