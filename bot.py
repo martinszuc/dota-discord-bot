@@ -87,22 +87,11 @@ async def on_ready():
 # Event: Bot joins a new guild
 @bot.event
 async def on_guild_join(guild):
-    """Initialize events for a guild only if they don't already exist."""
-    logger.info(f"Bot joined guild: {guild.name} (ID: {guild.id})")
-
-    # Check if this guild already has events
+    logger.info(f"Bot joined new guild: {guild.name} (ID: {guild.id})")
     if not events_manager.guild_has_events(guild.id):
-        # Populate initial events for this guild only if they don't exist
-        events_manager.initialize_guild_events(guild.id)
-        logger.info(f"Initialized events for guild '{guild.name}' (ID: {guild.id}).")
-    else:
-        logger.info(f"Guild '{guild.name}' (ID: {guild.id}) already has events, skipping initialization.")
+        events_manager.populate_events_for_guild(guild.id)
+        logger.info(f"Populated events for new guild: {guild.name}")
 
-    # Send a welcome message to the system channel or the first text channel if available
-    channel = guild.system_channel or next(
-        (chan for chan in guild.text_channels if chan.permissions_for(guild.me).send_messages), None)
-    if channel:
-        await channel.send("Dota Timer Bot has been added to this server! Type `!bot-help` to get started.")
 
 # Event: Command errors
 @bot.event

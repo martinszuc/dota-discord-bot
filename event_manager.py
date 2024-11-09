@@ -3,6 +3,7 @@
 import logging
 from sqlalchemy.orm import sessionmaker
 from database import StaticEvent, PeriodicEvent, engine
+from event_definitions import regular_periodic_events, regular_static_events
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
@@ -67,3 +68,29 @@ class EventsManager:
         """Check if a guild already has any events."""
         return self.session.query(StaticEvent).filter_by(guild_id=str(guild_id)).first() is not None \
             or self.session.query(PeriodicEvent).filter_by(guild_id=str(guild_id)).first() is not None
+
+    def populate_events_for_guild(self, guild_id):
+        with SessionLocal() as session:
+            # Add static events
+            for event_data in regular_static_events:
+                static_event = StaticEvent(
+                    guild_id=str(guild_id),  # Use guild_id here
+                    mode=event_data['mode'],
+                    time=event_data['time'],
+                    message=event_data['message']
+                )
+                session.add(static_event)
+
+            # Add periodic events
+            for event_data in regular_periodic_events:
+                periodic_event = PeriodicEvent(
+                    guild_id=str(guild_id),  # Use guild_id here
+                    mode=event_data['mode'],
+                    start_time=event_data['start_time'],
+                    interval=event_data['interval'],
+                    end_time=event_data['end_time'],
+                    message=event_data['message']
+                )
+                session.add(periodic_event)
+            session.commit()
+
