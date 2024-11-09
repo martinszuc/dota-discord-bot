@@ -40,41 +40,50 @@ WEBHOOK_ID = os.getenv('WEBHOOK_ID')
 
 @bot.event
 async def on_message(message):
-    # Step 1: Log basic message details
+    # Log received message details
     logger.info(f"Received message in channel {message.channel} from {message.author}: {message.content}")
-    logger.info(
-        f"Message details - is webhook: {bool(message.webhook_id)}, author ID: {message.author.id if hasattr(message.author, 'id') else 'N/A'}")
 
-    # Step 2: Check if the message is from a webhook and has the correct command prefix
-    if message.webhook_id and message.content.startswith(PREFIX):
-        logger.info(
-            "Webhook message identified with command prefix. Attempting to mock author permissions and process the command.")
-
-        # Mock author permissions for webhook messages
-        message.author = type('User', (object,), {
-            'guild_permissions': discord.Permissions.all(),
-            'id': bot.user.id,
-            'bot': False
-        })()
-
-        # Step 3: Process command from webhook message
-        try:
-            logger.info("Attempting to process webhook message as a command.")
-            await bot.process_commands(message)
-            logger.info("Webhook command processed successfully.")
-        except Exception as e:
-            logger.error(f"Error processing webhook command: {e}", exc_info=True)
+    # Check if the message is from a webhook
+    if message.webhook_id:
+        logger.info("Webhook message received.")
+        # Check if the message starts with the command prefix
+        if message.content.startswith(PREFIX):
+            logger.info("Processing webhook message as a command.")
+            # Manually parse the command and arguments
+            content = message.content[len(PREFIX):].strip()
+            if not content:
+                return
+            command_name, *args = content.split()
+            # Call the appropriate command function manually
+            if command_name == "start":
+                logger.info(f"Webhook command '!start' invoked with args: {args}")
+                # Create a mock Context object
+                ctx = await create_mock_context(message)
+                try:
+                    await start_game(ctx, *args)
+                    logger.info("start_game command executed successfully for webhook message.")
+                except Exception as e:
+                    logger.error(f"Error executing start_game command: {e}", exc_info=True)
+            # Add additional commands here as needed
         return
 
-    # Step 4: Check and process regular user commands
+    # Process regular user commands
     if message.content.startswith(PREFIX):
-        logger.info("Processing user command.")
-        try:
-            await bot.process_commands(message)
-            logger.info("User command processed successfully.")
-        except Exception as e:
-            logger.error(f"Error processing user command: {e}", exc_info=True)
+        await bot.process_commands(message)
 
+async def create_mock_context(message):
+    """Create a mock Context object for webhook messages."""
+    ctx = commands.Context(
+        bot=bot,
+        message=message,
+        prefix=PREFIX,
+        command=None,
+    )
+    # Set guild and author to the bot's own guild and member
+    ctx.guild = message.guild
+    ctx.channel = message.channel
+    ctx.author = message.guild.me  # Set author to the bot's member object
+    return ctx
 
 # Event: Bot is ready
 @bot.event
@@ -146,8 +155,13 @@ async def load_cogs():
 # Command: Start game timer
 @bot.command(name="start")
 async def start_game(ctx, countdown: int, *args):
-    logger.info(
-        f"Inside start_game command: countdown={countdown}, args={args}, guild_id={ctx.guild.id}, channel={ctx.channel.name}")
+    logger.info(f"Inside start_game command: countdown={countdown}, args={args}, guild_id={ctx.guild.id if ctx.guild else 'No Guild'}, channel={ctx.channel.name}")
+
+    # Ensure that ctx.guild is not None
+    if not ctx.guild:
+        await ctx.send("This command can only be used within a server.", tts=True)
+        logger.warning("start_game command invoked without a guild context.")
+        return
 
     mode = 'regular'
     for arg in args:
