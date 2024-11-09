@@ -133,3 +133,21 @@ class EventsManager:
     def close(self):
         """Close the database session."""
         self.session.close()
+
+    async def pause_all_events(self):
+        """Pause all active timers."""
+        for timer in [self.roshan_timer, self.glyph_timer, self.tormentor_timer]:
+            if timer.is_running:
+                await timer.pause()
+
+    async def resume_all_events(self):
+        """Resume all paused timers."""
+        for timer in [self.roshan_timer, self.glyph_timer, self.tormentor_timer]:
+            if timer.is_paused:
+                await timer.resume()
+
+    async def stop_all_events(self):
+        """Stop all timers."""
+        for timer in [self.roshan_timer, self.glyph_timer, self.tormentor_timer]:
+            if timer.is_running:
+                await timer.stop()
