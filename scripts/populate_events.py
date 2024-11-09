@@ -35,6 +35,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Base class for declarative class definitions
 Base.metadata.create_all(bind=engine)
 
+
 def clear_database(session):
     """Clear the StaticEvent and PeriodicEvent tables."""
     try:
@@ -47,59 +48,58 @@ def clear_database(session):
         logger.error(f"Error clearing database: {e}")
         raise
 
+
 def populate_events():
     """Populate the database with predefined events."""
     try:
         with SessionLocal() as session:
             clear_database(session)
+
             # Add regular static events
-            for event_id, event_data in regular_static_events.items():
+            for event_data in regular_static_events:
                 static_event = StaticEvent(
-                    id=event_id,
-                    mode='regular',
+                    mode=event_data['mode'],
                     time=event_data['time'],
                     message=event_data['message']
                 )
-                session.merge(static_event)
+                session.add(static_event)
 
             # Add regular periodic events
-            for event_id, event_data in regular_periodic_events.items():
+            for event_data in regular_periodic_events:
                 periodic_event = PeriodicEvent(
-                    id=event_id,
-                    mode='regular',
+                    mode=event_data['mode'],
                     start_time=event_data['start_time'],
                     interval=event_data['interval'],
                     end_time=event_data['end_time'],
                     message=event_data['message']
                 )
-                session.merge(periodic_event)
+                session.add(periodic_event)
 
             # Add turbo static events
-            for event_id, event_data in turbo_static_events.items():
+            for event_data in turbo_static_events:
                 static_event = StaticEvent(
-                    id=event_id,
-                    mode='turbo',
+                    mode=event_data['mode'],
                     time=event_data['time'],
                     message=event_data['message']
                 )
-                session.merge(static_event)
+                session.add(static_event)
 
             # Add turbo periodic events
-            for event_id, event_data in turbo_periodic_events.items():
+            for event_data in turbo_periodic_events:
                 periodic_event = PeriodicEvent(
-                    id=event_id,
-                    mode='turbo',
+                    mode=event_data['mode'],
                     start_time=event_data['start_time'],
                     interval=event_data['interval'],
                     end_time=event_data['end_time'],
                     message=event_data['message']
                 )
-                session.merge(periodic_event)
+                session.add(periodic_event)
 
             session.commit()
             logger.info("Database populated with default events.")
     except Exception as e:
         logger.error(f"Failed to populate events: {e}")
+
 
 if __name__ == "__main__":
     populate_events()
