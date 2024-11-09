@@ -26,6 +26,5 @@ class GlyphTimer(BaseTimer):
                 break
         except asyncio.CancelledError:
             logger.info("Glyph timer cancelled.")
-            await self.announcement.announce(self.game_timer, "Glyph timer cancelled.")
         finally:
             self.is_running = False
