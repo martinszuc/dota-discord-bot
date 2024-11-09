@@ -38,7 +38,6 @@ game_timers = {}
 
 WEBHOOK_ID = os.getenv('WEBHOOK_ID')
 
-
 @bot.event
 async def on_message(message):
     # Log received message details for troubleshooting
@@ -54,8 +53,12 @@ async def on_message(message):
     if str(message.webhook_id) == WEBHOOK_ID and message.content.startswith(PREFIX):
         logger.info("Message is from the webhook and matches the command prefix.")
 
-        # Mock the author to have all permissions to bypass potential permission checks
-        message.author = type('User', (object,), {'guild_permissions': discord.Permissions.all()})()
+        # Mock the author with all permissions and an id to avoid permission issues
+        mock_author = type('User', (object,), {
+            'guild_permissions': discord.Permissions.all(),
+            'id': bot.user.id  # Setting id attribute to bot's own id for compatibility
+        })
+        message.author = mock_author
 
         # Attempt to process the message as a command
         ctx = await bot.get_context(message)
@@ -76,6 +79,7 @@ async def on_message(message):
     if message.content.startswith(PREFIX):
         logger.info("Processing user command.")
         await bot.process_commands(message)
+
 
 # Event: Bot is ready
 @bot.event
