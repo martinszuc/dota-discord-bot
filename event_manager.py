@@ -1,24 +1,15 @@
 # event_manager.py
 
 from sqlalchemy import Column, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import yaml
-from database import Base, engine
 import logging
+
+from database import Base, engine  # Importing from database.py to reuse the engine
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Load configuration
-with open("config.yaml", "r") as file:
-    config = yaml.safe_load(file)
-
-DATABASE_URL = config.get("database_url", "sqlite:///bot.db")
-
-# Create the SQLAlchemy engine
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
 # Create a configured "Session" class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -29,14 +20,14 @@ class Event(Base):
     id = Column(Integer, primary_key=True, index=True)
     guild_id = Column(String, index=True, nullable=False)
     event_type = Column(String, index=True)  # 'static' or 'periodic'
-    time = Column(Integer, nullable=True)  # For static events
-    start_time = Column(Integer, nullable=True)  # For periodic events
-    interval = Column(Integer, nullable=True)    # For periodic events
-    end_time = Column(Integer, nullable=True)    # For periodic events
+    time = Column(Integer, nullable=True)  # For static events (stored as seconds)
+    start_time = Column(Integer, nullable=True)  # For periodic events (stored as seconds)
+    interval = Column(Integer, nullable=True)    # For periodic events (stored as seconds)
+    end_time = Column(Integer, nullable=True)    # For periodic events (stored as seconds)
     message = Column(String, nullable=False)
     mode = Column(String, default='regular')     # 'regular' or 'turbo'
 
-# Create tables if they don't exist
+# Ensure that the events table exists
 Base.metadata.create_all(bind=engine)
 
 class EventsManager:
@@ -48,7 +39,7 @@ class EventsManager:
     def get_events(self, guild_id, mode='regular'):
         """Retrieve all events for the specified guild and mode."""
         try:
-            events = self.session.query(Event).filter_by(guild_id=guild_id, mode=mode).all()
+            events = self.session.query(Event).filter_by(guild_id=str(guild_id), mode=mode).all()
             static_events = {}
             periodic_events = {}
             for event in events:
