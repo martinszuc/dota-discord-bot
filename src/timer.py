@@ -28,16 +28,17 @@ class GameTimer:
         self.glyph_timer = GlyphTimer(self)
         self.tormentor_timer = TormentorTimer(self)
 
-    async def start(self, channel, countdown, usernames):
+    async def start(self, channel, countdown):
         """Start the game timer."""
         self.channel = channel
         self.time_elapsed = -countdown
         self.paused = False
         self.pause_event.set()
-        logger.info(f"Game timer started with countdown={countdown} seconds and usernames={usernames} in mode={self.mode}")
+        logger.info(f"Game timer started with countdown={countdown} seconds in mode={self.mode}.")
 
         # Start the timer task
-        self.timer_task.start()
+        if not self.timer_task.is_running():
+            self.timer_task.start()
 
     async def stop(self):
         """Stop the game timer and all child timers."""

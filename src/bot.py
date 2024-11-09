@@ -107,18 +107,15 @@ async def load_cogs():
 # Command: Start game timer
 @bot.command(name="start")
 async def start_game(ctx, countdown: int, *args):
-    """Start the game timer with a countdown and optionally specify mode and mentions."""
+    """Start the game timer with a countdown and optionally specify mode."""
     logger.info(f"Command '!start' invoked by {ctx.author} with countdown={countdown} and args={args}")
 
     mode = 'regular'
-    mention_users = False
 
     # Parse arguments
     for arg in args:
         if arg.lower() in ['regular', 'turbo']:
             mode = arg.lower()
-        elif arg.lower() == 'mention':
-            mention_users = True
 
     guild_id = ctx.guild.id
 
@@ -134,19 +131,6 @@ async def start_game(ctx, countdown: int, *args):
         logger.warning(f"'{VOICE_CHANNEL_NAME}' voice channel not found.")
         return
 
-    # Get the list of members in the voice channel
-    players_in_channel = [member for member in dota_voice_channel.members if not member.bot]
-    if not players_in_channel:
-        await ctx.send(f"No players in the '{VOICE_CHANNEL_NAME}' voice channel.", tts=True)
-        logger.warning(f"No players found in the '{VOICE_CHANNEL_NAME}' voice channel.")
-        return
-
-    # Prepare player names or mentions
-    if mention_users:
-        player_names = ', '.join(member.mention for member in players_in_channel)
-    else:
-        player_names = ', '.join(member.display_name for member in players_in_channel)
-
     # Get the timer text channel
     timer_text_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
     if not timer_text_channel:
@@ -155,7 +139,7 @@ async def start_game(ctx, countdown: int, *args):
         return
 
     # Announce the start of the game timer
-    await timer_text_channel.send(f"Starting {mode} game timer with players: {player_names}")
+    await timer_text_channel.send(f"Starting {mode} game timer.")
 
     # Initialize and start the GameTimer
     game_timer = GameTimer(guild_id, mode)
@@ -172,9 +156,8 @@ async def start_game(ctx, countdown: int, *args):
     game_timer.voice_client = voice_client
 
     # Start the game timer
-    await game_timer.start(timer_text_channel, countdown, players_in_channel, mention_users)
-    logger.info(
-        f"Game timer started by {ctx.author} with countdown={countdown}, mode={mode}, and players={player_names}")
+    await game_timer.start(timer_text_channel, countdown)
+    logger.info(f"Game timer started by {ctx.author} with countdown={countdown} and mode={mode}.")
 
 # Command: Stop game timer
 @bot.command(name="stop")
