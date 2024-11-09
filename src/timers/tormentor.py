@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-
+from communication import Announcement
 
 class TormentorTimer:
     """Class to handle the Tormentor respawn timer."""
@@ -12,28 +12,29 @@ class TormentorTimer:
         self.logger = logging.getLogger('DotaDiscordBot')
         self.task = None
         self.is_running = False
+        self.announcement = Announcement()  # Initialize the Announcement instance
 
     async def start(self, channel):
         """Start the Tormentor respawn timer."""
         if self.is_running:
-            await channel.send("Tormentor timer is already running.", tts=True)
+            await self.announcement.announce(self.game_timer, "Tormentor timer is already running.")
             self.logger.warning("Attempted to start Tormentor timer, but it is already running.")
             return
         self.is_running = True
         self.logger.info("Tormentor timer started.")
-        await channel.send("Tormentor has been killed! Respawn timer started for 10 minutes.", tts=True)
+        await self.announcement.announce(self.game_timer, "Tormentor has been killed! Respawn timer started for 10 minutes.")
         self.task = asyncio.create_task(self._run_timer(channel))
 
     async def _run_timer(self, channel):
         """Internal method to run the Tormentor respawn timer."""
         try:
             await asyncio.sleep(600)  # 10 minutes
-            await channel.send("Tormentor has respawned!", tts=True)
+            await self.announcement.announce(self.game_timer, "Tormentor has respawned!")
             self.logger.info("Tormentor has respawned.")
             self.is_running = False
         except asyncio.CancelledError:
             self.logger.info("Tormentor timer was cancelled.")
-            await channel.send("Tormentor respawn timer has been cancelled.", tts=True)
+            await self.announcement.announce(self.game_timer, "Tormentor respawn timer has been cancelled.")
             self.is_running = False
 
     async def cancel(self):
@@ -43,7 +44,9 @@ class TormentorTimer:
             try:
                 await self.task
             except asyncio.CancelledError:
-                pass
+                self.logger.info("Tormentor timer task was successfully cancelled.")
+            await self.announcement.announce(self.game_timer, "Tormentor respawn timer has been cancelled.")
             self.logger.info("Tormentor timer cancelled.")
+            self.is_running = False
         else:
             self.logger.warning("Attempted to cancel Tormentor timer, but it was not running.")
