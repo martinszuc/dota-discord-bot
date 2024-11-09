@@ -33,6 +33,5 @@ class TormentorTimer(BaseTimer):
 
         except asyncio.CancelledError:
             logger.info("Tormentor timer cancelled.")
-            await self.announcement.announce(self.game_timer, "Tormentor timer cancelled.")
         finally:
             self.is_running = False
