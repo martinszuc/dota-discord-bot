@@ -45,12 +45,13 @@ turbo_static_events = [
 
 turbo_periodic_events = [
 # Runes
-    {"mode": "turbo", "start_time": min_to_sec("02:00"), "interval": min_to_sec("01:00"), "end_time": min_to_sec("99:00"), "message": "Power Runes soon!"},
-    {"mode": "turbo", "start_time": min_to_sec("03:00"), "interval": min_to_sec("04:00"), "end_time": min_to_sec("99:00"), "message": "XP Runes in 60 seconds!"},
+    {"mode": "turbo", "start_time": min_to_sec("05:30"), "interval": min_to_sec("02:00"), "end_time": min_to_sec("99:00"), "message": "Power Runes in 30 seconds!!"},
+    {"mode": "turbo", "start_time": min_to_sec("01:40"), "interval": min_to_sec("02:00"), "end_time": min_to_sec("4:10"), "message": "Water runes in 20 seconds!!"},
+    {"mode": "turbo", "start_time": min_to_sec("06:00"), "interval": min_to_sec("07:00"), "end_time": min_to_sec("99:00"), "message": "XP Runes"},
 # Tormentor
     {"mode": "turbo", "start_time": min_to_sec("10:00"), "interval": min_to_sec("05:00"), "end_time": min_to_sec("99:00"), "message": "Tormentor in 60 seconds!"},
 # Creeps
     {"mode": "turbo", "start_time": min_to_sec("05:00"), "interval": min_to_sec("05:00"), "end_time": min_to_sec("50:00"), "message": "Siege Creep in 30 seconds!"},
 # Lotus
-    {"mode": "turbo", "start_time": min_to_sec("01:00"), "interval": min_to_sec("01:30"), "end_time": min_to_sec("10:00"), "message": "Lotus pool coming 30 seconds!"},
+    {"mode": "turbo", "start_time": min_to_sec("01:00"), "interval": min_to_sec("01:30"), "end_time": min_to_sec("10:00"), "message": "Lotus pool in 30 seconds!"},
 ]

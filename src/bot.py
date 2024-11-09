@@ -237,7 +237,6 @@ async def stop_game(ctx):
             await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
             logger.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
     else:
-        await ctx.send("Game timer is not currently running.")
         logger.warning(f"{ctx.author} attempted to stop the timer, but it was not running.")
 
     # Disconnect from the voice channel
@@ -265,7 +264,6 @@ async def pause_game(ctx):
             await ctx.send("Game timer paused.")
             logger.info(f"Game timer and all child timers paused by {ctx.author}")
     else:
-        await ctx.send("Game timer is not currently running.")
         logger.warning(f"{ctx.author} attempted to pause the timer, but it was not running.")
 
 
@@ -284,7 +282,6 @@ async def unpause_game(ctx):
             await ctx.send("Game timer resumed.")
             logger.info(f"Game timer and all child timers resumed by {ctx.author}")
     else:
-        await ctx.send("Game timer is not currently running.")
         logger.warning(f"{ctx.author} attempted to unpause the timer, but it was not running.")
 
 
@@ -331,7 +328,6 @@ async def cancel_rosh_command(ctx):
             await ctx.send("No active Roshan timer to cancel.", )
             logger.warning(f"No active Roshan timer found to cancel for guild ID {guild_id}.")
     else:
-        await ctx.send("Game timer is not active.", )
         logger.warning(f"{ctx.author} attempted to cancel Roshan timer, but game timer is not active.")
 
 
@@ -378,7 +374,6 @@ async def cancel_glyph_command(ctx):
             await ctx.send("No active Glyph timer to cancel.", )
             logger.warning(f"No active Glyph timer found to cancel for guild ID {guild_id}.")
     else:
-        await ctx.send("Game timer is not active.", )
         logger.warning(f"{ctx.author} attempted to cancel Glyph timer, but game timer is not active.")
 
 
@@ -425,7 +420,6 @@ async def cancel_tormentor_command(ctx):
             await ctx.send("No active Tormentor timer to cancel.", )
             logger.warning(f"No active Tormentor timer found to cancel for guild ID {guild_id}.")
     else:
-        await ctx.send("Game timer is not active.", )
         logger.warning(f"{ctx.author} attempted to cancel Tormentor timer, but game timer is not active.")
 
 
