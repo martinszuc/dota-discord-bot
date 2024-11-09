@@ -38,6 +38,7 @@ game_timers = {}
 
 WEBHOOK_ID = os.getenv('WEBHOOK_ID')
 
+
 @bot.event
 async def on_message(message):
     # Log received message details
@@ -82,6 +83,7 @@ async def on_ready():
         else:
             logger.info(f"Channel '{TIMER_CHANNEL_NAME}' found in guild '{guild.name}'.")
 
+
 # Event: Bot joins a new guild
 @bot.event
 async def on_guild_join(guild):
@@ -101,30 +103,34 @@ async def on_guild_join(guild):
     if channel:
         await channel.send(f"Dota Timer Bot has been added to this server! Type `{PREFIX}bot-help` to get started.")
 
+
 # Event: Command errors
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("You are missing required arguments for this command.", tts=True)
+        await ctx.send("You are missing required arguments for this command.")
         logger.warning(f"Missing arguments in command '{ctx.command}'. Context: {ctx.message.content}")
     elif isinstance(error, commands.BadArgument):
-        await ctx.send("One or more arguments are invalid.", tts=True)
+        await ctx.send("One or more arguments are invalid.")
         logger.warning(f"Bad arguments in command '{ctx.command}'. Context: {ctx.message.content}")
     elif isinstance(error, commands.CommandNotFound):
-        await ctx.send(f"Command not found. Type `{PREFIX}bot-help` for a list of available commands.", tts=True)
+        await ctx.send(f"Command not found. Type `{PREFIX}bot-help` for a list of available commands.")
         logger.warning(f"Command not found. Context: {ctx.message.content}")
     elif isinstance(error, commands.CheckFailure):
-        await ctx.send("You do not have permission to use this command.", tts=True)
+        await ctx.send("You do not have permission to use this command.")
         logger.warning(f"Permission denied for user '{ctx.author}'. Command: {ctx.command}")
     else:
-        await ctx.send("An unexpected error occurred.", tts=True)
+        await ctx.send("An unexpected error occurred.")
         logger.error(f"Unhandled error in command '{ctx.command}': {error}", exc_info=True)
+
 
 # Check: Admin permissions
 def is_admin():
     def predicate(ctx):
         return ctx.author.guild_permissions.administrator
+
     return commands.check(predicate)
+
 
 # Load all cogs in the 'cogs' directory
 async def load_cogs():
@@ -137,13 +143,15 @@ async def load_cogs():
             except Exception as e:
                 logger.error(f"Failed to load cog {extension}: {e}", exc_info=True)
 
+
 # Command: Start game timer
 @bot.command(name="start")
 async def start_game(ctx, countdown: str, *args):
     try:
         # Convert countdown to an integer and allow negative values for post-start elapsed time
         countdown = int(countdown)
-        logger.info(f"Inside start_game command: countdown={countdown}, args={args}, guild_id={ctx.guild.id}, channel={ctx.channel.name}")
+        logger.info(
+            f"Inside start_game command: countdown={countdown}, args={args}, guild_id={ctx.guild.id}, channel={ctx.channel.name}")
 
         mode = 'regular'
         for arg in args:
@@ -154,31 +162,33 @@ async def start_game(ctx, countdown: str, *args):
 
         # Check if a timer is already running for this guild to ensure only one timer per guild
         if guild_id in game_timers and game_timers[guild_id].is_running():
-            await ctx.send("A game timer is already running in this server.", tts=True)
+            await ctx.send("A game timer is already running in this server.")
             logger.info(f"Game timer already running for guild ID {guild_id}. Start command ignored.")
             return
 
         # Find the voice channel
         dota_voice_channel = discord.utils.get(ctx.guild.voice_channels, name=VOICE_CHANNEL_NAME)
         if not dota_voice_channel:
-            await ctx.send(f"'{VOICE_CHANNEL_NAME}' voice channel not found. Please create it and try again.", tts=True)
+            await ctx.send(f"'{VOICE_CHANNEL_NAME}' voice channel not found. Please create it and try again.")
             logger.warning(f"'{VOICE_CHANNEL_NAME}' voice channel not found in guild '{ctx.guild.name}'.")
             return
 
         # Get the timer text channel
         timer_text_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
         if not timer_text_channel:
-            await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", tts=True)
+            await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
             logger.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
             return
 
         # Announce the start of the game timer
         if countdown < 0:
             await timer_text_channel.send(f"Starting {mode} game timer with an elapsed time of {-countdown} seconds.")
-            logger.info(f"Starting game timer with mode={mode} and elapsed time of {-countdown} seconds for guild ID {guild_id}.")
+            logger.info(
+                f"Starting game timer with mode={mode} and elapsed time of {-countdown} seconds for guild ID {guild_id}.")
         else:
             await timer_text_channel.send(f"Starting {mode} game timer with a countdown of {countdown} seconds.")
-            logger.info(f"Starting game timer with mode={mode} and countdown={countdown} seconds for guild ID {guild_id}.")
+            logger.info(
+                f"Starting game timer with mode={mode} and countdown={countdown} seconds for guild ID {guild_id}.")
 
         # Initialize and start the GameTimer
         game_timer = GameTimer(guild_id, mode)
@@ -195,7 +205,8 @@ async def start_game(ctx, countdown: str, *args):
 
         # Start the game timer with the specified countdown or elapsed time
         await game_timer.start(timer_text_channel, countdown)
-        logger.info(f"Game timer successfully started by {ctx.author} with countdown={countdown} and mode={mode} for guild ID {guild_id}.")
+        logger.info(
+            f"Game timer successfully started by {ctx.author} with countdown={countdown} and mode={mode} for guild ID {guild_id}.")
 
     except ValueError:
         await ctx.send("Please enter a valid number for the countdown time.")
@@ -203,6 +214,7 @@ async def start_game(ctx, countdown: str, *args):
     except Exception as e:
         logger.error(f"Error in start_game command: {e}", exc_info=True)
         await ctx.send("An unexpected error occurred while starting the game timer.")
+
 
 # Command: Stop game timer
 @bot.command(name="stop")
@@ -222,7 +234,7 @@ async def stop_game(ctx):
             # Remove the timer from the dictionary
             del game_timers[guild_id]
         else:
-            await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", tts=True)
+            await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
             logger.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
     else:
         await ctx.send("Game timer is not currently running.")
@@ -237,6 +249,7 @@ async def stop_game(ctx):
     else:
         logger.warning("Voice client was not connected.")
 
+
 # Command: Pause game timer
 @bot.command(name="pause", aliases=['p'])
 async def pause_game(ctx):
@@ -245,15 +258,16 @@ async def pause_game(ctx):
     guild_id = ctx.guild.id
     if guild_id in game_timers and game_timers[guild_id].is_running():
         if game_timers[guild_id].is_paused():
-            await ctx.send("Game timer is already paused.", tts=True)
+            await ctx.send("Game timer is already paused.")
             logger.warning(f"{ctx.author} attempted to pause the timer, but it was already paused.")
         else:
             await game_timers[guild_id].pause()
-            await ctx.send("Game timer paused.", tts=True)
+            await ctx.send("Game timer paused.")
             logger.info(f"Game timer and all child timers paused by {ctx.author}")
     else:
-        await ctx.send("Game timer is not currently running.", tts=True)
+        await ctx.send("Game timer is not currently running.")
         logger.warning(f"{ctx.author} attempted to pause the timer, but it was not running.")
+
 
 # Command: Unpause game timer
 @bot.command(name="unpause", aliases=['unp', 'up'])
@@ -263,15 +277,16 @@ async def unpause_game(ctx):
     guild_id = ctx.guild.id
     if guild_id in game_timers and game_timers[guild_id].is_running():
         if not game_timers[guild_id].is_paused():
-            await ctx.send("Game timer is not paused.", tts=True)
+            await ctx.send("Game timer is not paused.")
             logger.warning(f"{ctx.author} attempted to unpause the timer, but it was not paused.")
         else:
             await game_timers[guild_id].unpause()
-            await ctx.send("Game timer resumed.", tts=True)
+            await ctx.send("Game timer resumed.")
             logger.info(f"Game timer and all child timers resumed by {ctx.author}")
     else:
-        await ctx.send("Game timer is not currently running.", tts=True)
+        await ctx.send("Game timer is not currently running.")
         logger.warning(f"{ctx.author} attempted to unpause the timer, but it was not running.")
+
 
 # Command: Roshan timer
 @bot.command(name="rosh", aliases=['rs', 'rsdead'])
@@ -280,7 +295,7 @@ async def rosh_timer_command(ctx):
     logger.info(f"Command '!rosh' invoked by {ctx.author}")
     guild_id = ctx.guild.id
     if guild_id not in game_timers or not game_timers[guild_id].is_running():
-        await ctx.send("Game is not active.", tts=True)
+        await ctx.send("Game is not active.")
         logger.warning(f"Roshan timer attempted by {ctx.author} but game is not active.")
         return
 
@@ -292,11 +307,12 @@ async def rosh_timer_command(ctx):
             await timer_channel.send("Roshan timer started.")
             logger.info(f"Roshan timer started by {ctx.author}")
         else:
-            await ctx.send("Roshan timer is already running.", tts=True)
+            await ctx.send("Roshan timer is already running.", )
             logger.warning(f"{ctx.author} attempted to start Roshan timer, but it was already running.")
     else:
-        await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", tts=True)
+        await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", )
         logger.warning(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
+
 
 # Command: Cancel Roshan timer
 @bot.command(name='cancel-rosh', aliases=['rsalive', 'rsback', 'rsb'])
@@ -312,11 +328,12 @@ async def cancel_rosh_command(ctx):
             await timer_channel.send("Roshan timer has been cancelled.")
             logger.info(f"Roshan timer cancelled by {ctx.author}")
         else:
-            await ctx.send("No active Roshan timer to cancel.", tts=True)
+            await ctx.send("No active Roshan timer to cancel.", )
             logger.warning(f"No active Roshan timer found to cancel for guild ID {guild_id}.")
     else:
-        await ctx.send("Game timer is not active.", tts=True)
+        await ctx.send("Game timer is not active.", )
         logger.warning(f"{ctx.author} attempted to cancel Roshan timer, but game timer is not active.")
+
 
 # Command: Glyph cooldown timer
 @bot.command(name="glyph", aliases=['g'])
@@ -325,7 +342,7 @@ async def glyph_timer_command(ctx):
     logger.info(f"Command '!glyph' invoked by {ctx.author}")
     guild_id = ctx.guild.id
     if guild_id not in game_timers or not game_timers[guild_id].is_running():
-        await ctx.send("Game is not active.", tts=True)
+        await ctx.send("Game is not active.", )
         logger.warning(f"Glyph timer attempted by {ctx.author} but game is not active.")
         return
 
@@ -337,11 +354,12 @@ async def glyph_timer_command(ctx):
             await timer_channel.send("Glyph timer started.")
             logger.info(f"Glyph timer started by {ctx.author}")
         else:
-            await ctx.send("Glyph timer is already running.", tts=True)
+            await ctx.send("Glyph timer is already running.", )
             logger.warning(f"{ctx.author} attempted to start Glyph timer, but it was already running.")
     else:
-        await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", tts=True)
+        await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", )
         logger.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
+
 
 # Command: Cancel Glyph timer
 @bot.command(name="cancel-glyph", aliases=['cg'])
@@ -357,11 +375,12 @@ async def cancel_glyph_command(ctx):
             await timer_channel.send("Glyph timer has been cancelled.")
             logger.info(f"Glyph timer cancelled by {ctx.author}")
         else:
-            await ctx.send("No active Glyph timer to cancel.", tts=True)
+            await ctx.send("No active Glyph timer to cancel.", )
             logger.warning(f"No active Glyph timer found to cancel for guild ID {guild_id}.")
     else:
-        await ctx.send("Game timer is not active.", tts=True)
+        await ctx.send("Game timer is not active.", )
         logger.warning(f"{ctx.author} attempted to cancel Glyph timer, but game timer is not active.")
+
 
 # Command: Tormentor timer
 @bot.command(name="tormentor", aliases=['tm', 'torm', 't'])
@@ -370,7 +389,7 @@ async def tormentor_timer_command(ctx):
     logger.info(f"Command '!tormentor' invoked by {ctx.author}")
     guild_id = ctx.guild.id
     if guild_id not in game_timers or not game_timers[guild_id].is_running():
-        await ctx.send("Game is not active.", tts=True)
+        await ctx.send("Game is not active.", )
         logger.warning(f"Tormentor timer attempted by {ctx.author} but game is not active.")
         return
 
@@ -382,11 +401,12 @@ async def tormentor_timer_command(ctx):
             await timer_channel.send("Tormentor timer started.")
             logger.info(f"Tormentor timer started by {ctx.author}")
         else:
-            await ctx.send("Tormentor timer is already running.", tts=True)
+            await ctx.send("Tormentor timer is already running.", )
             logger.warning(f"{ctx.author} attempted to start Tormentor timer, but it was already running.")
     else:
-        await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", tts=True)
+        await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.", )
         logger.warning(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
+
 
 # Command: Cancel Tormentor timer
 @bot.command(name="cancel-torm", aliases=['ct', 'tormentorcancel'])
@@ -402,11 +422,12 @@ async def cancel_tormentor_command(ctx):
             await timer_channel.send("Tormentor timer has been cancelled.")
             logger.info(f"Tormentor timer cancelled by {ctx.author}")
         else:
-            await ctx.send("No active Tormentor timer to cancel.", tts=True)
+            await ctx.send("No active Tormentor timer to cancel.", )
             logger.warning(f"No active Tormentor timer found to cancel for guild ID {guild_id}.")
     else:
-        await ctx.send("Game timer is not active.", tts=True)
+        await ctx.send("Game timer is not active.", )
         logger.warning(f"{ctx.author} attempted to cancel Tormentor timer, but game timer is not active.")
+
 
 # Command: Add custom event
 @bot.command(name="add-event")
@@ -423,17 +444,19 @@ async def add_event_command(ctx, event_type: str, *args):
     try:
         if event_type.lower() == 'static':
             if len(args) < 2:
-                await ctx.send("Insufficient arguments for static event. Usage: `!add-event static <MM:SS> <message>`", tts=True)
+                await ctx.send(
+                    "Insufficient arguments for static event. Usage: `!add-event static <MM:SS> <message>`", )
                 return
             time_str = args[0]
             message = ' '.join(args[1:])
             time_seconds = min_to_sec(time_str)
             event_id = events_manager.add_static_event(guild_id, time_seconds, message)
-            await ctx.send(f"Static event added with ID {event_id}.", tts=True)
+            await ctx.send(f"Static event added with ID {event_id}.", )
             logger.info(f"Static event added with ID {event_id} by {ctx.author}")
         elif event_type.lower() == 'periodic':
             if len(args) < 4:
-                await ctx.send("Insufficient arguments for periodic event. Usage: `!add-event periodic <MM:SS> <MM:SS> <MM:SS> <message>`", tts=True)
+                await ctx.send(
+                    "Insufficient arguments for periodic event. Usage: `!add-event periodic <MM:SS> <MM:SS> <MM:SS> <message>`", )
                 return
             start_time_str = args[0]
             interval_str = args[1]
@@ -443,17 +466,18 @@ async def add_event_command(ctx, event_type: str, *args):
             interval = min_to_sec(interval_str)
             end_time = min_to_sec(end_time_str)
             event_id = events_manager.add_periodic_event(guild_id, start_time, interval, end_time, message)
-            await ctx.send(f"Periodic event added with ID {event_id}.", tts=True)
+            await ctx.send(f"Periodic event added with ID {event_id}.", )
             logger.info(f"Periodic event added with ID {event_id} by {ctx.author}")
         else:
-            await ctx.send("Invalid event type. Use 'static' or 'periodic'.", tts=True)
+            await ctx.send("Invalid event type. Use 'static' or 'periodic'.", )
             logger.warning(f"Invalid event type '{event_type}' used by {ctx.author}")
     except ValueError:
-        await ctx.send("Invalid time format. Please use MM:SS format.", tts=True)
+        await ctx.send("Invalid time format. Please use MM:SS format.", )
         logger.error(f"Invalid time format used by {ctx.author} with args={args}")
     except Exception as e:
-        await ctx.send(f"Error adding event: {e}", tts=True)
+        await ctx.send(f"Error adding event: {e}", )
         logger.error(f"Error adding event by {ctx.author}: {e}", exc_info=True)
+
 
 # Command: Remove custom event
 @bot.command(name="remove-event")
@@ -465,14 +489,15 @@ async def remove_event_command(ctx, event_id: int):
     try:
         success = events_manager.remove_event(guild_id, event_id)
         if success:
-            await ctx.send(f"Event ID {event_id} removed.", tts=True)
+            await ctx.send(f"Event ID {event_id} removed.", )
             logger.info(f"Event ID {event_id} removed by {ctx.author}")
         else:
-            await ctx.send(f"No event found with ID {event_id}.", tts=True)
+            await ctx.send(f"No event found with ID {event_id}.", )
             logger.warning(f"Event ID {event_id} not found for removal by {ctx.author}")
     except Exception as e:
-        await ctx.send(f"Error removing event: {e}", tts=True)
+        await ctx.send(f"Error removing event: {e}", )
         logger.error(f"Error removing event ID {event_id} by {ctx.author}: {e}", exc_info=True)
+
 
 # Command: List custom events
 @bot.command(name="list-events", aliases=['ls', 'events'])
@@ -521,6 +546,7 @@ async def list_events_command(ctx):
     await ctx.send(embed=embed)
     logger.info(f"Events listed for guild '{ctx.guild.name}' (ID: {guild_id})")
 
+
 # Graceful shutdown handling
 async def shutdown():
     logger.info("Initiating bot shutdown...")
@@ -546,14 +572,17 @@ async def shutdown():
     await bot.close()  # Properly close the bot
     logger.info("Bot has been shut down.")
 
+
 # Handle termination signals for graceful shutdown
 def handle_signal(sig):
     logger.info(f"Received exit signal {sig.name}...")
     asyncio.create_task(shutdown())
 
+
 # Register signal handlers
 signal.signal(signal.SIGINT, lambda s, f: handle_signal(signal.Signals.SIGINT))
 signal.signal(signal.SIGTERM, lambda s, f: handle_signal(signal.Signals.SIGTERM))
+
 
 # Main entry point
 async def main():
@@ -564,6 +593,7 @@ async def main():
             logger.error("Bot token not found. Please set the 'DISCORD_BOT_TOKEN' environment variable.")
             return
         await bot.start(token)
+
 
 if __name__ == "__main__":
     try:
