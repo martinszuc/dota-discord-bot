@@ -38,13 +38,12 @@ game_timers = {}
 
 @bot.event
 async def on_message(message):
-    # Ignore messages sent by the bot itself
-    if message.author == bot.user:
+    # Check if the message was sent by a webhook or user, and ignore bot's own messages
+    if message.author.bot and not message.webhook_id:
         return
 
-    # Process message if it starts with a command prefix
+    # Process the message if it starts with the command prefix
     if message.content.startswith(PREFIX):
-        # Make sure the message is processed as a command
         await bot.process_commands(message)
 
 # Event: Bot is ready
