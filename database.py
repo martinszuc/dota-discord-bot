@@ -34,6 +34,7 @@ class StaticEvent(Base):
     """Model for storing static events."""
     __tablename__ = "static_events"
     id = Column(Integer, primary_key=True, index=True)
+    guild_id = Column(String, index=True, nullable=False)
     mode = Column(String, index=True, nullable=False)  # 'regular' or 'turbo'
     time = Column(Integer, nullable=False)  # Stored as seconds
     message = Column(String, nullable=False)
@@ -42,6 +43,7 @@ class PeriodicEvent(Base):
     """Model for storing periodic events."""
     __tablename__ = "periodic_events"
     id = Column(Integer, primary_key=True, index=True)
+    guild_id = Column(String, index=True, nullable=False)
     mode = Column(String, index=True, nullable=False)  # 'regular' or 'turbo'
     start_time = Column(Integer, nullable=False)  # in seconds
     interval = Column(Integer, nullable=False)    # in seconds
