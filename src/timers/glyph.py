@@ -1,76 +1,57 @@
-# src/timers/roshan.py
+# src/timers/glyph.py
 
 import asyncio
-from src.utils.config import logger
+import logging
 from communication import Announcement
 
-class RoshanTimer:
-    """Class to manage Roshan's respawn timer."""
+class GlyphTimer:
+    """Class to handle the Glyph cooldown timer."""
 
     def __init__(self, game_timer):
-        self.is_running = False  # Renamed from is_active
+        self.is_running = False  # Ensure this attribute exists
         self.game_timer = game_timer
         self.task = None
+        self.logger = logging.getLogger('DotaDiscordBot')
         self.announcement = Announcement()
 
     async def start(self, channel):
-        """Start the Roshan respawn timer with announcements."""
+        """Start the Glyph cooldown timer."""
         if self.is_running:
-            await self.announcement.announce(self.game_timer, "Roshan timer is already active.")
-            logger.warning("Roshan timer is already active.")
+            await self.announcement.announce(self.game_timer, "Glyph timer is already running.")
+            self.logger.warning("Attempted to start Glyph timer, but it is already running.")
             return
-
         self.is_running = True
-        await self.announcement.announce(self.game_timer, "Roshan has been killed! Starting respawn timer.")
-        logger.info("Roshan timer started.")
-
-        # Start the timer task
+        await self.announcement.announce(self.game_timer, "Glyph used! Cooldown timer started for 5 minutes.")
+        self.logger.info("Glyph timer started.")
         self.task = asyncio.create_task(self.run_timer(channel))
 
     async def run_timer(self, channel):
-        """Run the Roshan respawn timer and announce at key intervals."""
+        """Run the Glyph cooldown timer."""
         try:
-            min_respawn = 8 * 60  # 8 minutes
-            max_respawn = 11 * 60  # 11 minutes
-
-            # Warning at min_respawn - 60 seconds
-            await asyncio.sleep(min_respawn - 60)
+            await asyncio.sleep(300)  # 5 minutes
             if not self.is_running:
                 return
-            await self.announcement.announce(self.game_timer, "Roshan may respawn in 1 minute!")
-
-            # Roshan may have respawned
-            await asyncio.sleep(60)
-            if not self.is_running:
-                return
-            await self.announcement.announce(self.game_timer, "Roshan may have respawned!")
-
-            # Definitive respawn
-            await asyncio.sleep(max_respawn - min_respawn)
-            if not self.is_running:
-                return
-            await self.announcement.announce(self.game_timer, "Roshan has definitely respawned!")
-
+            await self.announcement.announce(self.game_timer, "Glyph cooldown has ended!")
+            self.logger.info("Glyph cooldown ended.")
         except asyncio.CancelledError:
-            logger.info("Roshan timer was cancelled.")
-            await self.announcement.announce(self.game_timer, "Roshan timer has been cancelled.")
+            self.logger.info("Glyph timer was cancelled.")
+            await self.announcement.announce(self.game_timer, "Glyph timer has been cancelled.")
         finally:
-            # Reset after completion or cancellation
             self.is_running = False
             self.task = None
 
     async def cancel(self):
-        """Cancel the Roshan respawn timer."""
+        """Cancel the Glyph cooldown timer."""
         if self.is_running:
             if self.task and not self.task.done():
                 self.task.cancel()
                 try:
                     await self.task
                 except asyncio.CancelledError:
-                    logger.info("Roshan timer task was successfully cancelled.")
+                    self.logger.info("Glyph timer task was successfully cancelled.")
             self.is_running = False
             self.task = None
-            await self.announcement.announce(self.game_timer, "Roshan timer has been reset and is inactive.")
-            logger.info("Roshan timer has been reset and is inactive.")
+            await self.announcement.announce(self.game_timer, "Glyph timer has been reset and is inactive.")
+            self.logger.info("Glyph timer has been reset and is inactive.")
         else:
-            logger.info("Roshan timer was not active.")
+            self.logger.info("Glyph timer was not active.")
