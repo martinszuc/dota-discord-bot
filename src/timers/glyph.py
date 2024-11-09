@@ -17,11 +17,11 @@ class GlyphTimer:
     async def start(self, channel):
         """Start the Glyph cooldown timer."""
         if self.is_running:
-            await self.announcement.announce(self.game_timer, "Glyph timer is already running.")
+            await self.announcement.announce(self.game_timer, "Glyph timer running.")
             self.logger.warning("Attempted to start Glyph timer, but it is already running.")
             return
         self.is_running = True
-        await self.announcement.announce(self.game_timer, "Glyph used! Cooldown timer started for 5 minutes.")
+        await self.announcement.announce(self.game_timer, "Glyph used by enemy!")
         self.logger.info("Glyph timer started.")
         self.task = asyncio.create_task(self.run_timer(channel))
 
@@ -31,11 +31,11 @@ class GlyphTimer:
             await asyncio.sleep(300)  # 5 minutes
             if not self.is_running:
                 return
-            await self.announcement.announce(self.game_timer, "Glyph cooldown has ended!")
+            await self.announcement.announce(self.game_timer, "Enemy glyph available!")
             self.logger.info("Glyph cooldown ended.")
         except asyncio.CancelledError:
             self.logger.info("Glyph timer was cancelled.")
-            await self.announcement.announce(self.game_timer, "Glyph timer has been cancelled.")
+            await self.announcement.announce(self.game_timer, "Glyph timer cancelled.")
         finally:
             self.is_running = False
             self.task = None
@@ -51,7 +51,7 @@ class GlyphTimer:
                     self.logger.info("Glyph timer task was successfully cancelled.")
             self.is_running = False
             self.task = None
-            await self.announcement.announce(self.game_timer, "Glyph timer has been reset and is inactive.")
+            await self.announcement.announce(self.game_timer, "Glyph timer reset.")
             self.logger.info("Glyph timer has been reset and is inactive.")
         else:
             self.logger.info("Glyph timer was not active.")

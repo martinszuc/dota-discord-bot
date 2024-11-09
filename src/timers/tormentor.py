@@ -17,12 +17,12 @@ class TormentorTimer:
     async def start(self, channel):
         """Start the Tormentor respawn timer."""
         if self.is_running:
-            await self.announcement.announce(self.game_timer, "Tormentor timer is already running.")
+            await self.announcement.announce(self.game_timer, "Tormentor timer running.")
             self.logger.warning("Attempted to start Tormentor timer, but it is already running.")
             return
         self.is_running = True
         self.logger.info("Tormentor timer started.")
-        await self.announcement.announce(self.game_timer, "Tormentor has been killed!.")
+        await self.announcement.announce(self.game_timer, "Tormentor killed!.")
         self.task = asyncio.create_task(self._run_timer(channel))
 
     async def _run_timer(self, channel):
@@ -34,7 +34,7 @@ class TormentorTimer:
             self.is_running = False
         except asyncio.CancelledError:
             self.logger.info("Tormentor timer was cancelled.")
-            await self.announcement.announce(self.game_timer, "Tormentor respawn timer has been cancelled.")
+            await self.announcement.announce(self.game_timer, "Tormentor timer cancelled.")
             self.is_running = False
 
     async def cancel(self):

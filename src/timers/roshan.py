@@ -16,12 +16,12 @@ class RoshanTimer:
     async def start(self, channel):
         """Start the Roshan respawn timer with announcements."""
         if self.is_running:
-            await self.announcement.announce(self.game_timer, "Roshan timer is already active.")
+            await self.announcement.announce(self.game_timer, "Roshan timer active.")
             logger.warning("Roshan timer is already active.")
             return
 
         self.is_running = True
-        await self.announcement.announce(self.game_timer, "Roshan has been killed! Starting respawn timer.")
+        await self.announcement.announce(self.game_timer, "Roshan killed! .")
         logger.info("Roshan timer started.")
 
         # Start the timer task
@@ -43,17 +43,17 @@ class RoshanTimer:
             await asyncio.sleep(60)
             if not self.is_running:
                 return
-            await self.announcement.announce(self.game_timer, "Roshan may have respawned!")
+            await self.announcement.announce(self.game_timer, "Roshan maybe up!")
 
             # Definitive respawn
             await asyncio.sleep(max_respawn - min_respawn)
             if not self.is_running:
                 return
-            await self.announcement.announce(self.game_timer, "Roshan has definitely respawned!")
+            await self.announcement.announce(self.game_timer, "Roshan up!")
 
         except asyncio.CancelledError:
             logger.info("Roshan timer was cancelled.")
-            await self.announcement.announce(self.game_timer, "Roshan timer has been cancelled.")
+            await self.announcement.announce(self.game_timer, "Roshan timer cancelled.")
         finally:
             # Reset after completion or cancellation
             self.is_running = False
