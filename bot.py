@@ -372,18 +372,50 @@ async def remove_event_command(ctx, event_id: int):
 # Command: List custom events
 @bot.command(name="list-events")
 async def list_events_command(ctx):
-    """List all custom events."""
+    """List all custom events for the current guild."""
     logger.info(f"Command '!list-events' invoked by {ctx.author}")
     guild_id = ctx.guild.id
+
+    # Retrieve events specific to this guild
     static_events = events_manager.get_static_events(guild_id)
     periodic_events = events_manager.get_periodic_events(guild_id)
 
+    # Check if any events exist
     if not static_events and not periodic_events:
-        await ctx.send("No custom events found.")
-    else:
-        await ctx.send(f"Static Events: {static_events}\nPeriodic Events: {periodic_events}")
+        await ctx.send("No custom events found for this guild.")
+        return
 
-# (Other command implementations here...)
+    # Create an embed message for better readability
+    embed = discord.Embed(title=f"Events for Guild: {ctx.guild.name}", color=0x00ff00)
+
+    # Add static events to the embed
+    if static_events:
+        embed.add_field(name="**Static Events:**", value="", inline=False)
+        for event_id, event_data in static_events.items():
+            time_formatted = f"{event_data['time'] // 60:02}:{event_data['time'] % 60:02}"
+            embed.add_field(
+                name=f"ID {event_id} (Static)",
+                value=f"Time: {time_formatted}\nMessage: {event_data['message']}",
+                inline=False
+            )
+
+    # Add periodic events to the embed
+    if periodic_events:
+        embed.add_field(name="**Periodic Events:**", value="", inline=False)
+        for event_id, event_data in periodic_events.items():
+            start_formatted = f"{event_data['start_time'] // 60:02}:{event_data['start_time'] % 60:02}"
+            interval_formatted = f"{event_data['interval'] // 60:02}:{event_data['interval'] % 60:02}"
+            end_formatted = f"{event_data['end_time'] // 60:02}:{event_data['end_time'] % 60:02}"
+            embed.add_field(
+                name=f"ID {event_id} (Periodic)",
+                value=f"Start Time: {start_formatted}\nInterval: {interval_formatted}\nEnd Time: {end_formatted}\nMessage: {event_data['message']}",
+                inline=False
+            )
+
+    # Send the embed message with the events list
+    await ctx.send(embed=embed)
+    logger.info(f"Events listed for guild '{ctx.guild.name}' (ID: {guild_id})")
+
 
 # Graceful shutdown handling
 async def shutdown():
