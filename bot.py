@@ -84,6 +84,19 @@ async def on_ready():
         else:
             logger.info(f"Channel '{TIMER_CHANNEL_NAME}' found in guild '{guild.name}'.")
 
+# Event: Bot joins a new guild
+@bot.event
+async def on_guild_join(guild):
+    """Initialize events for a guild when the bot first joins."""
+    logger.info(f"Bot joined guild: {guild.name} (ID: {guild.id})")
+    # Populate initial events for this guild
+    events_manager.initialize_guild_events(guild.id)
+
+    # Send a message to the system channel or first text channel if available
+    channel = guild.system_channel or next((chan for chan in guild.text_channels if chan.permissions_for(guild.me).send_messages), None)
+    if channel:
+        await channel.send("Dota Timer Bot has been added to this server! Type `!bot-help` to get started.")
+
 # Event: Command errors
 @bot.event
 async def on_command_error(ctx, error):
@@ -355,84 +368,15 @@ async def list_events_command(ctx):
     """List all custom events."""
     logger.info(f"Command '!list-events' invoked by {ctx.author}")
     guild_id = ctx.guild.id
-    try:
-        events = events_manager.list_events(guild_id)
-        if events:
-            embed = discord.Embed(title="Custom Events", color=0x00ff00)
-            for event in events:
-                if event.event_type == 'static':
-                    time_formatted = f"{event.time // 60:02}:{event.time % 60:02}"
-                    embed.add_field(name=f"ID {event.id} (Static)", value=f"Time: {time_formatted}\nMessage: {event.message}", inline=False)
-                elif event.event_type == 'periodic':
-                    start_formatted = f"{event.start_time // 60:02}:{event.start_time % 60:02}"
-                    interval_formatted = f"{event.interval // 60:02}:{event.interval % 60:02}"
-                    end_formatted = f"{event.end_time // 60:02}:{event.end_time % 60:02}"
-                    embed.add_field(
-                        name=f"ID {event.id} (Periodic)",
-                        value=f"Start Time: {start_formatted}\nInterval: {interval_formatted}\nEnd Time: {end_formatted}\nMessage: {event.message}",
-                        inline=False
-                    )
-            await ctx.send(embed=embed)
-            logger.info(f"Custom events listed for guild {guild_id} by {ctx.author}")
-        else:
-            await ctx.send("No custom events found.", tts=True)
-            logger.info(f"No custom events found for guild {guild_id} when requested by {ctx.author}")
-    except Exception as e:
-        await ctx.send(f"Error listing events: {e}", tts=True)
-        logger.error(f"Error listing events for guild {guild_id} by {ctx.author}: {e}", exc_info=True)
+    static_events = events_manager.get_static_events(guild_id)
+    periodic_events = events_manager.get_periodic_events(guild_id)
 
-# Command: Help
-@bot.command(name="bot-help")
-async def bot_help_command(ctx):
-    """Show available commands with examples."""
-    logger.info(f"Command '!bot-help' invoked by {ctx.author}")
-    help_message = f"""
-**Dota Timer Bot - Help**
+    if not static_events and not periodic_events:
+        await ctx.send("No custom events found.")
+    else:
+        await ctx.send(f"Static Events: {static_events}\nPeriodic Events: {periodic_events}")
 
-- `{PREFIX}start <countdown> [mode] [mention]`
-  - Starts the game timer with a countdown. Add 'mention' to mention players.
-  - **mode** can be 'regular' or 'turbo'. Defaults to 'regular'.
-  - **Example:** `{PREFIX}start 180` or `{PREFIX}start 180 turbo mention`
-
-- `{PREFIX}stop`
-  - Stops the current game timer.
-  - **Example:** `{PREFIX}stop`
-
-- `{PREFIX}pause`
-  - Pauses the game timer and all events.
-  - **Example:** `{PREFIX}pause`
-
-- `{PREFIX}unpause`
-  - Resumes the game timer and all events.
-  - **Example:** `{PREFIX}unpause`
-
-- `{PREFIX}rosh`
-  - Logs Roshan's death and starts an 8-minute respawn timer.
-  - **Example:** `{PREFIX}rosh`
-
-- `{PREFIX}glyph`
-  - Starts a 5-minute cooldown timer for the enemy's glyph.
-  - **Example:** `{PREFIX}glyph`
-
-- `{PREFIX}add-event <type> <parameters>`
-  - Adds a custom event.
-  - **Static Event Example:** `{PREFIX}add-event static 10:00 "Siege Creep incoming!"`
-  - **Periodic Event Example:** `{PREFIX}add-event periodic 05:00 02:00 20:00 "Bounty Runes soon!"`
-
-- `{PREFIX}remove-event <event_id>`
-  - Removes a custom event by its ID.
-  - **Example:** `{PREFIX}remove-event 3`
-
-- `{PREFIX}list-events`
-  - Lists all custom events.
-  - **Example:** `{PREFIX}list-events`
-
-- `{PREFIX}bot-help`
-  - Shows this help message.
-  - **Example:** `{PREFIX}bot-help`
-    """
-    await ctx.send(help_message)
-    logger.info(f"Help message sent to {ctx.author}")
+# (Other command implementations here...)
 
 # Graceful shutdown handling
 async def shutdown():
@@ -475,4 +419,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         logger.info("Bot stopped manually.")
-
