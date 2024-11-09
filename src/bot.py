@@ -46,12 +46,14 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
-    # Check if the message is from a webhook
-    if message.webhook_id:
-        logger.info(
-            f"Message received from a webhook in channel {message.channel.name} with content: {message.content}")
+    # Check if the message is from a webhook and starts with the command prefix
+    if message.webhook_id and message.content.startswith(PREFIX):
+        logger.info(f"Processing webhook message as command: {message.content}")
+        # Make the bot explicitly process the webhook message as a command
+        await bot.process_commands(message)
+        return
 
-    # Process the message if it starts with the command prefix
+    # Process regular user messages that start with the command prefix
     if message.content.startswith(PREFIX):
         await bot.process_commands(message)
 
