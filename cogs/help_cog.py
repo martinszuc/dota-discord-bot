@@ -23,7 +23,7 @@ class HelpCog(commands.Cog):
         categories = {
             "📅 **Game Timer**": [
                 {
-                    "name": f"{self.prefix}start <countdown [sec]> [mode]]",
+                    "name": f"{self.prefix}start <countdown [sec]> [mode]",
                     "value": "Starts the game timer.\n**Example:** `{0}start 45` or `{0}start 60 turbo`".format(self.prefix)
                 },
                 {
@@ -31,37 +31,37 @@ class HelpCog(commands.Cog):
                     "value": "Stops the current game timer."
                 },
                 {
-                    "name": f"{self.prefix}pause` *(Alias: `p`)*",
+                    "name": f"{self.prefix}pause *(Alias: `p`)*",
                     "value": "Pauses the game timer and all events."
                 },
                 {
-                    "name": f"{self.prefix}unpause` *(Alias: `unp`, `up`)*",
+                    "name": f"{self.prefix}unpause *(Alias: `unp`, `up`)*",
                     "value": "Resumes the game timer and all events."
                 }
             ],
             "🛡️ **Roshan Timer**": [
                 {
-                    "name": f"{self.prefix}rosh` *(Aliases: `rs`, `rsdead`, `rs-dead`, `rsdied`, `rs-died`)*",
+                    "name": f"{self.prefix}rosh *(Aliases: `rs`, `rsdead`, `rs-dead`, `rsdied`, `rs-died`)*",
                     "value": "Logs Roshan's death and starts the respawn timer.\n**Example:** `{0}rosh`".format(self.prefix)
                 },
                 {
-                    "name": f"{self.prefix}cancel-rosh` *(Aliases: 'rsalive', 'rsback', 'rsb')*",
+                    "name": f"{self.prefix}cancel-rosh *(Aliases: `rsalive`, `rsback`, `rsb`)*",
                     "value": "Cancels the Roshan respawn timer if active.\n**Example:** `{0}cancel-rosh`".format(self.prefix)
                 }
             ],
             "🔮 **Glyph Timer**": [
                 {
-                    "name": f"{self.prefix}glyph` *(Alias: `g`)*",
+                    "name": f"{self.prefix}glyph *(Alias: `g`)*",
                     "value": "Starts a 5-minute cooldown timer for the enemy's glyph.\n**Example:** `{0}glyph`".format(self.prefix)
                 },
                 {
-                    "name": f"{self.prefix}cancel-glyph` *(Aliases: `cg`)*",
+                    "name": f"{self.prefix}cancel-glyph *(Alias: `cg`)*",
                     "value": "Cancels the Glyph cooldown timer.\n**Example:** `{0}cancel-glyph`".format(self.prefix)
                 }
             ],
             "🐉 **Tormentor Timer**": [
                 {
-                    "name": f"{self.prefix}tormentor` *(Aliases: `tm`, `torm`, `t`)*",
+                    "name": f"{self.prefix}tormentor *(Aliases: `tm`, `torm`, `t`)*",
                     "value": "Logs Tormentor's death and starts the respawn timer.\n**Example:** `{0}tormentor`".format(self.prefix)
                 }
             ],
@@ -75,13 +75,13 @@ class HelpCog(commands.Cog):
                     "value": "Removes a custom event by its ID.\n**Example:** `{0}remove-event 3`".format(self.prefix)
                 },
                 {
-                    "name": f"{self.prefix}list-events` *(Aliases: `ls`, `events`)*",
+                    "name": f"{self.prefix}list-events *(Aliases: `ls`, `events`)*",
                     "value": "Lists all custom events.\n**Example:** `{0}list-events`".format(self.prefix)
                 }
             ],
             "ℹ️ **General**": [
                 {
-                    "name": f"{self.prefix}bot-help` *(Aliases: `dota-help`, `dotahelp`, `pls`, `help`)*",
+                    "name": f"{self.prefix}bot-help *(Aliases: `dota-help`, `dotahelp`, `pls`, `help`)*",
                     "value": "Shows this help message.\n**Example:** `{0}bot-help`".format(self.prefix)
                 }
             ]
