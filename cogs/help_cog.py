@@ -1,10 +1,9 @@
 # cogs/help_cog.py
 
 import logging
-
+import discord
 from discord.ext import commands
 from src.utils.config import PREFIX
-
 
 class HelpCog(commands.Cog):
     """A Cog for handling the help command."""
@@ -15,7 +14,7 @@ class HelpCog(commands.Cog):
         self.prefix = PREFIX
 
     @commands.command(name="bot-help", aliases=['dota-help', 'dotahelp', 'pls', 'help'])
-    async def bot_help_command(self, ctx):
+    async def send_help(self, ctx):
         """Show available commands with examples."""
         self.logger.info(f"Command '!bot-help' invoked by {ctx.author}")
         help_message = f"""
@@ -30,23 +29,23 @@ class HelpCog(commands.Cog):
   - Stops the current game timer.
   - **Example:** `{self.prefix}stop`
 
-- `{self.prefix}pause` *(Alias: `!p`)*
+- `{self.prefix}pause` *(Alias: `p`)*
   - Pauses the game timer and all events.
   - **Example:** `{self.prefix}pause`
 
-- `{self.prefix}unpause` *(Alias: `!unp`)*
+- `{self.prefix}unpause` *(Alias: `unp`)*
   - Resumes the game timer and all events.
   - **Example:** `{self.prefix}unpause`
 
-- `{self.prefix}rosh` *(Aliases: `!rs`, `!rsdead`, `!rs-dead`, `!rsdied`, `!rs-died`)*
+- `{self.prefix}rosh` *(Aliases: `rs`, `rsdead`, `rs-dead`, `rsdied`, `rs-died`)*
   - Logs Roshan's death and starts the respawn timer.
   - **Example:** `{self.prefix}rosh`
 
-- `{self.prefix}cancel-rosh` *(Aliases: `!rsalive`, `!rsback`, `!rs-cancel`, `!rs-back`, `!rs-alive`, `!rsb`)*
+- `{self.prefix}cancel-rosh` *(Aliases: `rsalive`, `rsback`, `rs-cancel`, `rs-back`, `rs-alive`, `rsb`)*
   - Cancels the Roshan respawn timer if it's active.
   - **Example:** `{self.prefix}cancel-rosh`
 
-- `{self.prefix}glyph` *(Alias: `!g`)*
+- `{self.prefix}glyph` *(Alias: `g`)*
   - Starts a 5-minute cooldown timer for the enemy's glyph.
   - **Example:** `{self.prefix}glyph`
 
@@ -59,17 +58,17 @@ class HelpCog(commands.Cog):
   - Removes a custom event by its ID.
   - **Example:** `{self.prefix}remove-event 3`
 
-- `{self.prefix}list-events` *(Aliases: `!ls`, `!events`)*
+- `{self.prefix}list-events` *(Aliases: `ls`, `events`)*
   - Lists all custom events.
   - **Example:** `{self.prefix}list-events`
 
-- `{self.prefix}bot-help` *(Aliases: `!dota-help`, `!dotahelp`, `!pls`, `!help`)*
+- `{self.prefix}bot-help` *(Aliases: `dota-help`, `dotahelp`, `pls`, `help`)*
   - Shows this help message.
   - **Example:** `{self.prefix}bot-help`
         """
         await ctx.send(help_message, tts=True)
         self.logger.info(f"Help message sent to {ctx.author}")
 
-def setup(bot):
+async def setup(bot):
     """Function required for loading the Cog."""
-    bot.add_cog(HelpCog(bot))
+    await bot.add_cog(HelpCog(bot))
