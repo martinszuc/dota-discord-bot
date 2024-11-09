@@ -37,25 +37,20 @@ events_manager = EventsManager()
 game_timers = {}
 
 
+WEBHOOK_ID = os.getenv('WEBHOOK_ID')
+
 @bot.event
 async def on_message(message):
-    # Log each message for troubleshooting
+    # Log message for troubleshooting
     logger.info(f"Received message in channel {message.channel} from {message.author} with ID {message.webhook_id}: {message.content}")
 
     # Ignore messages from the bot itself to avoid command loops
     if message.author == bot.user:
         return
 
-    # Check if the message is from the specified channel only
-    if message.channel.name != TIMER_CHANNEL_NAME:
-        logger.info(f"Ignored message from channel {message.channel.name}, only processing messages from '{TIMER_CHANNEL_NAME}'.")
-        return
-
-    # Check if message is from a webhook and contains a command
-    if message.webhook_id and message.content.startswith(PREFIX):
+    # Check if message is from the specified webhook and contains a command
+    if str(message.webhook_id) == WEBHOOK_ID and message.content.startswith(PREFIX):
         logger.info(f"Processing webhook message as command: {message.content}")
-
-        # Temporary workaround: Set message author to the bot's user for command handling
         message.author = await bot.fetch_user(bot.user.id)
         await bot.process_commands(message)
         return
