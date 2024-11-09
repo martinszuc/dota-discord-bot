@@ -9,6 +9,7 @@ from src.timers.glyph import GlyphTimer
 from src.timers.roshan import RoshanTimer
 from src.timers.tormentor import TormentorTimer
 
+
 class GameTimer:
     """Class to manage the game timer and events."""
 
@@ -17,7 +18,6 @@ class GameTimer:
         self.mode = mode
         self.time_elapsed = 0
         self.channel = None
-        self.custom_events = {}
         self.paused = False
         self.pause_event = asyncio.Event()
         self.announcement_manager = Announcement()
@@ -28,12 +28,21 @@ class GameTimer:
         self.glyph_timer = GlyphTimer(self)
         self.tormentor_timer = TormentorTimer(self)
 
+        # Initialize event dictionaries
+        self.static_events = {}
+        self.periodic_events = {}
+
     async def start(self, channel, countdown):
         """Start the game timer."""
         self.channel = channel
         self.time_elapsed = -countdown
         self.paused = False
         self.pause_event.set()
+
+        # Load events for the guild and mode
+        self.static_events = self.events_manager.get_static_events(self.guild_id, self.mode)
+        self.periodic_events = self.events_manager.get_periodic_events(self.guild_id, self.mode)
+
         logger.info(f"Game timer started with countdown={countdown} seconds in mode={self.mode}.")
 
         # Start the timer task
