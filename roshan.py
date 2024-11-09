@@ -11,6 +11,7 @@ class RoshanTimer:
     def __init__(self, game_timer):
         self.is_active = False
         self.game_timer = game_timer
+        self.task = None
 
     async def start(self, channel):
         """Start the Roshan respawn timer with TTS announcements."""
@@ -25,21 +26,44 @@ class RoshanTimer:
         await self.game_timer.announce_message("Roshan has been killed! Starting respawn timer.")
         logger.info("Roshan timer started.")
 
-        min_respawn = 8 * 60
-        max_respawn = 11 * 60
+        self.task = asyncio.create_task(self.run_timer(channel))
 
-        await asyncio.sleep(min_respawn - 60)
-        await channel.send("Roshan may respawn in 1 minute!", tts=True)
-        await self.game_timer.announce_message("Roshan may respawn in 1 minute!")
-        logger.info("Roshan may respawn in 1 minute.")
+    async def run_timer(self, channel):
+        try:
+            min_respawn = 8 * 60  # 8 minutes
+            max_respawn = 11 * 60  # 11 minutes
 
-        await asyncio.sleep(60)
-        await channel.send("Roshan may have respawned!", tts=True)
-        await self.game_timer.announce_message("Roshan may have respawned!")
-        logger.info("Roshan may have respawned.")
+            # Warning at min_respawn - 60 seconds
+            await asyncio.sleep(min_respawn - 60)
+            message = "Roshan may respawn in 1 minute!"
+            await channel.send(message, tts=True)
+            await self.game_timer.announce_message(message)
+            logger.info("Roshan may respawn in 1 minute.")
 
-        await asyncio.sleep(max_respawn - min_respawn)
-        await channel.send("Roshan has definitely respawned!", tts=True)
-        await self.game_timer.announce_message("Roshan has definitely respawned!")
-        logger.info("Roshan has definitely respawned.")
-        self.is_active = False
+            # Roshan may have respawned
+            await asyncio.sleep(60)
+            message = "Roshan may have respawned!"
+            await channel.send(message, tts=True)
+            await self.game_timer.announce_message(message)
+            logger.info("Roshan may have respawned.")
+
+            # Definitive respawn
+            await asyncio.sleep(max_respawn - min_respawn)
+            message = "Roshan has definitely respawned!"
+            await channel.send(message, tts=True)
+            await self.game_timer.announce_message(message)
+            logger.info("Roshan has definitely respawned.")
+
+        except asyncio.CancelledError:
+            logger.info("Roshan timer was cancelled.")
+            await channel.send("Roshan timer has been cancelled.", tts=True)
+            await self.game_timer.announce_message("Roshan timer has been cancelled.")
+        finally:
+            self.is_active = False
+
+    async def cancel(self):
+        """Cancel the Roshan respawn timer."""
+        if self.task and not self.task.done():
+            self.task.cancel()
+            await self.task
+            logger.info("Roshan timer cancelled.")

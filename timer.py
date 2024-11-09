@@ -33,6 +33,7 @@ class GameTimer:
 
         self.static_events = {}
         self.periodic_events = {}
+        self.roshan_timer = RoshanTimer(self)  # Integrate RoshanTimer here
 
     async def start(self, channel, countdown, usernames, mention_users=False):
         """Start the game timer."""
@@ -83,6 +84,10 @@ class GameTimer:
             self.voice_client = None
             logger.info("Voice client disconnected.")
 
+        # Stop Roshan timer if active
+        if self.roshan_timer.is_active:
+            await self.roshan_timer.cancel()
+
     async def pause(self):
         """Pause the game timer."""
         self.paused = True
@@ -131,8 +136,7 @@ class GameTimer:
     async def _check_static_events(self):
         """Check and trigger static events."""
         for event_id, event in self.static_events.items():
-            event_time = parse_time(event["time"])
-            if self.time_elapsed == event_time:
+            if self.time_elapsed == event["time"]:
                 message = event['message']
                 await self.announce_message(message)
                 logger.info(f"Static event triggered: ID={event_id}, time={event['time']}, message='{message}'")
@@ -140,17 +144,14 @@ class GameTimer:
     async def _check_periodic_events(self):
         """Check and trigger predefined periodic events."""
         for event_id, event in self.periodic_events.items():
-            start_seconds = parse_time(event["start_time"])
-            interval_seconds = parse_time(event["interval"])
-            end_seconds = parse_time(event["end_time"])
-            if start_seconds <= self.time_elapsed <= end_seconds:
-                if (self.time_elapsed - start_seconds) % interval_seconds == 0:
+            if event["start_time"] <= self.time_elapsed <= event["end_time"]:
+                if (self.time_elapsed - event["start_time"]) % event["interval"] == 0:
                     message = event['message']
                     await self.announce_message(message)
                     logger.info(f"Periodic event triggered: ID={event_id}, message='{message}', interval={event['interval']}")
 
     async def announce_message(self, message):
-        """Announce a message in the voice channel."""
+        """Announce a message in the text and voice channels."""
         # Send message in text channel using embeds
         if self.channel:
             embed = discord.Embed(description=message, color=0x00ff00)
@@ -173,23 +174,24 @@ class GameTimer:
                 voice = "en-US-AriaNeural"
                 logger.info(f"Using voice: {voice}")
 
-                output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-                communicate = edge_tts.Communicate(text=clean_message, voice=voice)
-                logger.info(f"Generating TTS audio for message: '{clean_message}'")
-                await communicate.save(output_file.name)
-                logger.info(f"Saved TTS audio to {output_file.name}")
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as output_file:
+                    communicate = edge_tts.Communicate(text=clean_message, voice=voice)
+                    logger.info(f"Generating TTS audio for message: '{clean_message}'")
+                    await communicate.save(output_file.name)
+                    logger.info(f"Saved TTS audio to {output_file.name}")
 
                 audio_source = discord.FFmpegPCMAudio(output_file.name)
                 if not self.voice_client.is_playing():
-                    self.voice_client.play(audio_source)
+                    self.voice_client.play(audio_source, after=lambda e: logger.info(f"Finished playing audio: {e}") if e else None)
                     logger.info("Started playing audio in voice channel.")
                 else:
                     logger.warning("Voice client is already playing audio.")
 
+                # Wait until audio finishes playing
                 while self.voice_client.is_playing():
                     await asyncio.sleep(0.1)
 
-                output_file.close()
+                # Cleanup temporary file
                 os.unlink(output_file.name)
                 logger.info("Finished playing audio and cleaned up temporary file.")
             except Exception as e:
