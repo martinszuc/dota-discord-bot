@@ -7,6 +7,7 @@ import logging
 # Define the path to the configuration file and logs directory
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "config.yaml")
 LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs")
+TTS_CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tts_cache")
 
 # Load configuration data
 def load_config():
@@ -22,12 +23,9 @@ TIMER_CHANNEL_NAME = CONFIG.get("timer_channel", "timer-bot")
 VOICE_CHANNEL_NAME = CONFIG.get("voice_channel", "DOTA")
 DATABASE_URL = CONFIG.get("database_url", "sqlite:///bot.db")
 
-# Directory for caching TTS audio files
-TTS_CACHE_DIR = "./tts_cache"
-os.makedirs(TTS_CACHE_DIR, exist_ok=True)
-
-# Ensure the logs directory exists
+# Ensure necessary directories exist
 os.makedirs(LOG_DIR, exist_ok=True)
+os.makedirs(TTS_CACHE_DIR, exist_ok=True)
 
 # Set up logging
 LOG_FILE_PATH = os.path.join(LOG_DIR, "bot.log")
