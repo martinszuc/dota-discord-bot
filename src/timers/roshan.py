@@ -23,7 +23,19 @@ class RoshanTimer(BaseTimer):
                 max_respawn = 11 * 60  # Regular mode: 11 minutes max respawn
 
             await self.announcement.announce(self.game_timer, "Roshan killed!")
-            await asyncio.sleep(min_respawn - 60)  # Warning 1 minute before min respawn
+            await asyncio.sleep(min_respawn - 300)  # Wait until 5 minutes before min respawn
+
+            if not self.is_running:
+                return
+            await self.announcement.announce(self.game_timer, "Roshan may respawn in 5 minutes!")
+
+            await asyncio.sleep(120)  # Wait until 3 minutes before min respawn
+
+            if not self.is_running:
+                return
+            await self.announcement.announce(self.game_timer, "Roshan may respawn in 3 minutes!")
+
+            await asyncio.sleep(120)  # Wait until 1 minute before min respawn
 
             if not self.is_running:
                 return
