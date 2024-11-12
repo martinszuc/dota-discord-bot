@@ -425,7 +425,6 @@ async def cancel_tormentor_command(ctx):
 
 # Command: Add custom event
 @bot.command(name="add-event")
-@is_admin()
 async def add_event_command(ctx, event_type: str, *args):
     """
     Add a custom event.
@@ -475,7 +474,6 @@ async def add_event_command(ctx, event_type: str, *args):
 
 # Command: Remove custom event
 @bot.command(name="remove-event")
-@is_admin()
 async def remove_event_command(ctx, event_id: int):
     """Remove a custom event by its ID."""
     logger.info(f"Command '!remove-event' invoked by {ctx.author} with event_id={event_id}")
@@ -540,21 +538,41 @@ async def list_events_command(ctx):
     await ctx.send(embed=embed)
     logger.info(f"Events listed for guild '{ctx.guild.name}' (ID: {guild_id})")
 
-@bot.command(name="enable-mindful", aliases=['enable-pma', 'pma'])
+
+@bot.command(name="reset-events")
 @is_admin()
+async def reset_events_command(ctx):
+    """Reset all events for the guild to default settings."""
+    guild_id = ctx.guild.id
+    try:
+        # Delete all events associated with this guild
+        events_manager.delete_events_for_guild(guild_id)
+
+        # Repopulate with default events
+        events_manager.populate_events_for_guild(guild_id)
+
+        await ctx.send("All events have been reset to default settings for this guild.")
+        logger.info(f"Events reset for guild {guild_id} by {ctx.author}")
+    except Exception as e:
+        await ctx.send("An error occurred while resetting events.")
+        logger.error(f"Error resetting events for guild {guild_id}: {e}", exc_info=True)
+
+
+@bot.command(name="enable-mindful", aliases=['enable-pma', 'pma'])
 async def enable_mindful_messages(ctx):
     guild_id = ctx.guild.id
     events_manager.set_mindful_messages(guild_id, enabled=True)
     await ctx.send("Mindful messages have been enabled.")
     logger.info(f"Mindful messages enabled by {ctx.author} in guild {guild_id}.")
 
+
 @bot.command(name="disable-mindful", aliases=['disable-pma', 'no-pma'])
-@is_admin()
 async def disable_mindful_messages(ctx):
     guild_id = ctx.guild.id
     events_manager.set_mindful_messages(guild_id, enabled=False)
     await ctx.send("Mindful messages have been disabled.")
     logger.info(f"Mindful messages disabled by {ctx.author} in guild {guild_id}.")
+
 
 # Graceful shutdown handling
 async def shutdown():
@@ -586,6 +604,7 @@ async def shutdown():
 def handle_signal(sig):
     logger.info(f"Received exit signal {sig.name}...")
     asyncio.create_task(shutdown())
+
 
 # Register signal handlers
 signal.signal(signal.SIGINT, lambda s, f: handle_signal(signal.Signals.SIGINT))

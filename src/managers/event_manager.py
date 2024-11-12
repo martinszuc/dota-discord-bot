@@ -10,6 +10,7 @@ from src.event_definitions import regular_static_events, regular_periodic_events
 # Create a configured "Session" class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
 class EventsManager:
     """Class to manage static and periodic events for different game modes."""
 
@@ -135,6 +136,21 @@ class EventsManager:
     def close(self):
         """Close the database session."""
         self.session.close()
+
+    def delete_events_for_guild(self, guild_id):
+        """Delete all static and periodic events for a specific guild."""
+        try:
+            # Delete all static events for the guild
+            self.session.query(StaticEvent).filter_by(guild_id=str(guild_id)).delete()
+
+            # Delete all periodic events for the guild
+            self.session.query(PeriodicEvent).filter_by(guild_id=str(guild_id)).delete()
+
+            self.session.commit()
+            logger.info(f"All events deleted for guild ID {guild_id}")
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"Error deleting events for guild ID {guild_id}: {e}", exc_info=True)
 
     def set_mindful_messages(self, guild_id, enabled):
         """Enable or disable mindful messages for a guild."""
