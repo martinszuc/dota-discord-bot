@@ -1,4 +1,4 @@
-A# src/cogs/help_cog.py
+# src/cogs/help_cog.py
 
 import logging
 import discord
