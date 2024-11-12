@@ -8,7 +8,7 @@ from src.managers.event_manager import EventsManager
 from src.timers.glyph import GlyphTimer
 from src.timers.roshan import RoshanTimer
 from src.timers.tormentor import TormentorTimer
-
+from src.timers.mindful import MindfulTimer
 
 class GameTimer:
     """Class to manage the game timer and events."""
@@ -27,6 +27,7 @@ class GameTimer:
         self.roshan_timer = RoshanTimer(self)
         self.glyph_timer = GlyphTimer(self)
         self.tormentor_timer = TormentorTimer(self)
+        self.mindful_timer = MindfulTimer(self)
 
         # Initialize event dictionaries
         self.static_events = {}
@@ -35,7 +36,7 @@ class GameTimer:
     async def start(self, channel, countdown):
         """Start the game timer with either a countdown or an elapsed time."""
         self.channel = channel
-        self.time_elapsed = -countdown if countdown < 0 else -countdown
+        self.time_elapsed = -countdown if countdown < 0 else countdown
         self.paused = False
         self.pause_event.set()
 
@@ -48,6 +49,9 @@ class GameTimer:
         # Start the timer task
         if not self.timer_task.is_running():
             self.timer_task.start()
+
+        # Start all child timers, including the mindful timer
+        await self.mindful_timer.start(channel)
 
     async def stop(self):
         """Stop the game timer and all child timers."""
@@ -103,19 +107,19 @@ class GameTimer:
 
     async def _stop_all_child_timers(self):
         """Helper method to stop all child timers."""
-        for timer in [self.roshan_timer, self.glyph_timer, self.tormentor_timer]:
+        for timer in [self.roshan_timer, self.glyph_timer, self.tormentor_timer, self.mindful_timer]:
             if timer.is_running:
                 await timer.stop()
 
     async def _pause_all_child_timers(self):
         """Helper method to pause all child timers."""
-        for timer in [self.roshan_timer, self.glyph_timer, self.tormentor_timer]:
+        for timer in [self.roshan_timer, self.glyph_timer, self.tormentor_timer, self.mindful_timer]:
             if timer.is_running and not timer.is_paused:
                 await timer.pause()
 
     async def _resume_all_child_timers(self):
         """Helper method to resume all child timers."""
-        for timer in [self.roshan_timer, self.glyph_timer, self.tormentor_timer]:
+        for timer in [self.roshan_timer, self.glyph_timer, self.tormentor_timer, self.mindful_timer]:
             if timer.is_running and timer.is_paused:
                 await timer.resume()
 

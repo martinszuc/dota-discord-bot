@@ -1,9 +1,11 @@
 # event_manager.py
+import random
 
 from src.utils.config import logger
 from sqlalchemy.orm import sessionmaker
-from src.database import StaticEvent, PeriodicEvent, engine
-from src.utils.event_definitions import regular_static_events, regular_periodic_events, turbo_static_events, turbo_periodic_events
+from src.database import StaticEvent, PeriodicEvent, engine, ServerSettings
+from src.event_definitions import regular_static_events, regular_periodic_events, turbo_static_events, \
+    turbo_periodic_events, mindful_messages
 
 # Create a configured "Session" class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -133,3 +135,27 @@ class EventsManager:
     def close(self):
         """Close the database session."""
         self.session.close()
+
+    def set_mindful_messages(self, guild_id, enabled):
+        """Enable or disable mindful messages for a guild."""
+        try:
+            settings = self.session.query(ServerSettings).filter_by(server_id=str(guild_id)).first()
+            if settings:
+                settings.mindful_messages_enabled = 1 if enabled else 0
+            else:
+                settings = ServerSettings(server_id=str(guild_id), mindful_messages_enabled=1 if enabled else 0)
+                self.session.add(settings)
+            self.session.commit()
+            logger.info(f"Mindful messages {'enabled' if enabled else 'disabled'} for guild {guild_id}.")
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"Error setting mindful messages for guild {guild_id}: {e}", exc_info=True)
+
+    def mindful_messages_enabled(self, guild_id):
+        """Check if mindful messages are enabled for a guild."""
+        settings = self.session.query(ServerSettings).filter_by(server_id=str(guild_id)).first()
+        return bool(settings.mindful_messages_enabled) if settings else False
+
+    def get_random_mindful_message(self):
+        """Get a random mindful message."""
+        return random.choice(mindful_messages)["message"]

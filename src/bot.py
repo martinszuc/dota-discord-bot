@@ -540,6 +540,21 @@ async def list_events_command(ctx):
     await ctx.send(embed=embed)
     logger.info(f"Events listed for guild '{ctx.guild.name}' (ID: {guild_id})")
 
+@bot.command(name="enable-mindful", aliases=['enable-pma', 'pma'])
+@is_admin()
+async def enable_mindful_messages(ctx):
+    guild_id = ctx.guild.id
+    events_manager.set_mindful_messages(guild_id, enabled=True)
+    await ctx.send("Mindful messages have been enabled.")
+    logger.info(f"Mindful messages enabled by {ctx.author} in guild {guild_id}.")
+
+@bot.command(name="disable-mindful", aliases=['disable-pma', 'no-pma'])
+@is_admin()
+async def disable_mindful_messages(ctx):
+    guild_id = ctx.guild.id
+    events_manager.set_mindful_messages(guild_id, enabled=False)
+    await ctx.send("Mindful messages have been disabled.")
+    logger.info(f"Mindful messages disabled by {ctx.author} in guild {guild_id}.")
 
 # Graceful shutdown handling
 async def shutdown():
@@ -571,7 +586,6 @@ async def shutdown():
 def handle_signal(sig):
     logger.info(f"Received exit signal {sig.name}...")
     asyncio.create_task(shutdown())
-
 
 # Register signal handlers
 signal.signal(signal.SIGINT, lambda s, f: handle_signal(signal.Signals.SIGINT))

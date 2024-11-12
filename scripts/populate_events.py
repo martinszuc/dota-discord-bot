@@ -3,7 +3,7 @@
 import logging
 from sqlalchemy.orm import sessionmaker
 from src.database import StaticEvent, PeriodicEvent, engine
-from src.utils.event_definitions import regular_static_events, regular_periodic_events, turbo_static_events, turbo_periodic_events
+from src.event_definitions import regular_static_events, regular_periodic_events, turbo_static_events, turbo_periodic_events
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
