@@ -6,7 +6,7 @@ import logging
 
 # Set base directory to the current directory where the script is running
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-CONFIG_PATH = os.path.join(BASE_DIR, "config", "config.yaml")
+CONFIG_PATH = os.path.join(BASE_DIR, "config.yaml")
 LOG_DIR = os.path.join(BASE_DIR, "logs")
 TTS_CACHE_DIR = os.path.join(BASE_DIR, "tts_cache")
 
