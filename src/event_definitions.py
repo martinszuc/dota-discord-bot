@@ -76,3 +76,7 @@ mindful_messages = [
     {"message": "Stay hydrated, and keep your cool!"},
     {"message": "Remember, it’s just a game. Have fun and relax!"},
 ]
+mindful_pre_messages = [
+    {"message": "for you to stay calm here is 30 seconds of calmming nature sounds!"},
+
+]
