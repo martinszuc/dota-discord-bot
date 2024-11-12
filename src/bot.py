@@ -151,20 +151,15 @@ async def load_cogs():
 async def start_game(ctx, countdown: str, *args):
     logger.debug(f"Command '!start' invoked by '{ctx.author}' with countdown='{countdown}' and args={args}")
     try:
-        # Convert countdown to seconds or MM:SS
-        if ":" in countdown:
-            # Handle MM:SS format
-            seconds = min_to_sec(countdown)
-            logger.debug(f"Parsed countdown '{countdown}' as {seconds} seconds.")
-            countdown_int = seconds
-        else:
-            # Handle seconds as integer
-            countdown_int = int(countdown)
-            logger.debug(f"Parsed countdown '{countdown}' as {countdown_int} seconds.")
-
+        # Validate that countdown is either MM:SS or a signed integer
+        if not (countdown.startswith("-") and countdown[1:].isdigit()) and not countdown.replace(":", "").isdigit():
+            await ctx.send("Please enter a valid countdown format (MM:SS or signed integer in seconds).")
+            logger.error(f"Invalid countdown format provided by '{ctx.author}'. Context: {ctx.message.content}")
+            return
         logger.info(
-            f"Inside start_game command: countdown={countdown_int}, args={args}, guild_id={ctx.guild.id}, channel={ctx.channel.name}")
+            f"Inside start_game command: countdown='{countdown}', args={args}, guild_id={ctx.guild.id}, channel={ctx.channel.name}")
 
+        # Determine mode based on args
         mode = 'regular'
         for arg in args:
             if arg.lower() in ['regular', 'turbo']:
@@ -198,14 +193,9 @@ async def start_game(ctx, countdown: str, *args):
             logger.info(f"Found text channel '{TIMER_CHANNEL_NAME}' in guild '{ctx.guild.name}'.")
 
         # Announce the start of the game timer
-        if countdown_int < 0:
-            await timer_text_channel.send(f"Starting {mode} game timer with an elapsed time of {-countdown_int} seconds.")
-            logger.info(
-                f"Starting game timer with mode='{mode}' and elapsed time of {-countdown_int} seconds for guild ID {guild_id}.")
-        else:
-            await timer_text_channel.send(f"Starting {mode} game timer with a countdown of {countdown_int} seconds.")
-            logger.info(
-                f"Starting game timer with mode='{mode}' and countdown={countdown_int} seconds for guild ID {guild_id}.")
+        await timer_text_channel.send(f"Starting {mode} game timer with countdown '{countdown}'.")
+        logger.info(
+            f"Starting game timer with mode='{mode}' and countdown='{countdown}' for guild ID {guild_id}.")
 
         # Initialize and start the GameTimer
         game_timer = GameTimer(guild_id, mode)
@@ -224,17 +214,15 @@ async def start_game(ctx, countdown: str, *args):
         game_timer.voice_client = voice_client
         logger.debug(f"Voice client assigned to GameTimer for guild ID {guild_id}.")
 
-        # Start the game timer with the specified countdown or elapsed time
-        await game_timer.start(timer_text_channel, countdown_int)
+        # Start the game timer with the countdown string directly
+        await game_timer.start(timer_text_channel, countdown)
         logger.info(
-            f"Game timer successfully started by '{ctx.author}' with countdown={countdown_int} and mode='{mode}' for guild ID {guild_id}.")
+            f"Game timer successfully started by '{ctx.author}' with countdown='{countdown}' and mode='{mode}' for guild ID {guild_id}.")
 
-    except ValueError:
-        await ctx.send("Please enter a valid number or MM:SS format for the countdown time.")
-        logger.error(f"Invalid countdown format provided by '{ctx.author}'. Context: {ctx.message.content}")
     except Exception as e:
         logger.error(f"Error in start_game command: {e}", exc_info=True)
         await ctx.send("An unexpected error occurred while starting the game timer.")
+
 
 
 # Command: Stop game timer
