@@ -6,7 +6,7 @@ import os
 
 import discord
 
-from communication.announcement import Announcement
+from src.communication.announcement import Announcement
 from src.timers.base import BaseTimer
 from src.utils.config import logger, MINDFUL_AUDIO_DIR  # Ensure MINDFUL_AUDIO_DIR is defined in config
 from src.event_definitions import mindful_messages, mindful_pre_messages

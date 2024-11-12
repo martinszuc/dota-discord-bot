@@ -2,7 +2,7 @@
 
 import asyncio
 from discord.ext import tasks
-from communication.announcement import Announcement
+from src.communication.announcement import Announcement
 from src.utils.config import logger
 from src.managers.event_manager import EventsManager
 from src.timers.glyph import GlyphTimer

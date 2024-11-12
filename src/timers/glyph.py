@@ -1,7 +1,7 @@
 # src/timers/glyph.py
 
 import asyncio
-from communication.announcement import Announcement
+from src.communication.announcement import Announcement
 from src.timers.base import BaseTimer
 from src.utils.config import logger
 
