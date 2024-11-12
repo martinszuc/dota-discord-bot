@@ -1,4 +1,4 @@
-# cogs/help_cog.py
+A# src/cogs/help_cog.py
 
 import logging
 import discord
@@ -63,6 +63,16 @@ class HelpCog(commands.Cog):
                 {
                     "name": f"{self.prefix}tormentor *(Aliases: `tm`, `torm`, `t`)*",
                     "value": "Logs Tormentor's death and starts the respawn timer.\n**Example:** `{0}tormentor`".format(self.prefix)
+                }
+            ],
+            "💬 **Mindful Messages**": [
+                {
+                    "name": f"{self.prefix}enable-mindful *(Aliases: `enable-pma`, `pma`)*",
+                    "value": "Enables periodic mindful messages to encourage positive play.\n**Example:** `{0}enable-mindful`".format(self.prefix)
+                },
+                {
+                    "name": f"{self.prefix}disable-mindful *(Aliases: `disable-pma`, `no-pma`)*",
+                    "value": "Disables the periodic mindful messages.\n**Example:** `{0}disable-mindful`".format(self.prefix)
                 }
             ],
             "⚙️ **Custom Events**": [
