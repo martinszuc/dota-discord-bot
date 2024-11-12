@@ -15,10 +15,16 @@ class TormentorTimer(BaseTimer):
     async def _run_timer(self, channel):
         try:
             # Set respawn duration based on game mode
-            respawn_duration = 10 * 60 if self.game_timer.mode == 'regular' else 5 * 60  # 10 minutes for regular,  minutes for turbo
+            respawn_duration = 10 * 60 if self.game_timer.mode == 'regular' else 5 * 60  # 10 minutes for regular, 5 minutes for turbo
 
-            await self.announcement.announce(self.game_timer, "Tormentor defeated! Respawn timer started.")
-            await asyncio.sleep(respawn_duration - 60)  # Announce 1-minute warning
+            await self.announcement.announce(self.game_timer, "Tormentor timer started.")
+            await asyncio.sleep(respawn_duration - 180)  # Announce 3-minute warning
+
+            if not self.is_running:
+                return
+            await self.announcement.announce(self.game_timer, "Tormentor will respawn in 3 minutes!")
+
+            await asyncio.sleep(120)  # Wait for 2 more minutes to announce the 1-minute warning
 
             if not self.is_running:
                 return

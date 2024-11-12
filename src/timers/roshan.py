@@ -1,7 +1,6 @@
 # src/timers/roshan.py
 
 import asyncio
-import logging
 from communication.announcement import Announcement
 from src.timers.base import BaseTimer
 from src.utils.config import logger
@@ -14,6 +13,7 @@ class RoshanTimer(BaseTimer):
         self.announcement = Announcement()
 
     async def _run_timer(self, channel):
+        logger.info("Roshan timer started.")
         try:
             if self.game_timer.mode == 'turbo':
                 min_respawn = 4 * 60  # Turbo mode: 4 minutes minimum respawn
@@ -51,7 +51,7 @@ class RoshanTimer(BaseTimer):
 
             if not self.is_running:
                 return
-            await self.announcement.announce(self.game_timer, "Roshan is up!")
+            await self.announcement.announce(self.game_timer, "Roshan is up for sure!")
 
         except asyncio.CancelledError:
             logger.info("Roshan timer cancelled.")
