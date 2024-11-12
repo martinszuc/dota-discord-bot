@@ -77,6 +77,15 @@ mindful_messages = [
     {"message": "Remember, it’s just a game. Have fun and relax!"},
 ]
 mindful_pre_messages = [
-    {"message": "for you to stay calm here is 30 seconds of calmming nature sounds!"},
-
+    {"message": "Take a deep breath. Here are a few moments of soothing nature sounds, just for you."},
+    {"message": "For a brief pause, listen to these calming sounds from nature. Let yourself unwind."},
+    {"message": "Close your eyes if you can, and let these sounds of nature bring you a moment of peace."},
+    {"message": "Here’s a moment of tranquility to help you feel calm and centered. Enjoy the sounds of nature."},
+    {"message": "A little relaxation break for you. Let these calming sounds wash over you and release any tension."},
+    {"message": "For a few moments, immerse yourself in these peaceful nature sounds. A small escape to relax."},
+    {"message": "Here’s 30 seconds of serene nature sounds to help bring you calm and ease your mind."},
+    {"message": "Take a moment to relax. Here’s a brief escape into nature to help you recharge."},
+    {"message": "Allow yourself to slow down. Here’s a snippet of nature’s calm to help you refocus and relax."},
+    {"message": "This is your reminder to breathe and let go. Listen to these sounds of nature to find calm."},
 ]
+
