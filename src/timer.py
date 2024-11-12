@@ -35,29 +35,33 @@ class GameTimer:
         self.periodic_events = {}
 
     async def start(self, channel, countdown):
-        """Start the game timer with a countdown or elapsed time based on the input format."""
+        """Start the game timer with either a countdown or an elapsed time."""
         self.channel = channel
-
-        # Determine if countdown is MM:SS format or seconds
-        if isinstance(countdown, str) and ":" in countdown:
-            seconds = min_to_sec(countdown.strip("-"))
-        else:
-            seconds = int(countdown)
-
-        # If countdown is negative, start immediately with elapsed time equal to the positive value
-        if countdown.startswith("-"):
-            self.time_elapsed = seconds
-        else:
-            self.time_elapsed = -seconds  # Start with a delay if countdown is positive
-
         self.paused = False
         self.pause_event.set()
+
+        # Check if countdown is in 'mm:ss' format or integer seconds
+        if isinstance(countdown, str):
+            if countdown.startswith("-"):
+                # Remove the negative sign, convert to seconds, and set as positive elapsed time
+                self.time_elapsed = min_to_sec(countdown[1:])
+            else:
+                # Countdown delay if positive mm:ss format
+                self.time_elapsed = -min_to_sec(countdown)
+        elif isinstance(countdown, int):
+            # Handle integer countdown directly
+            if countdown < 0:
+                # Negative countdown: set as positive elapsed time
+                self.time_elapsed = abs(countdown)
+            else:
+                # Positive countdown: set as negative to use as delay
+                self.time_elapsed = -countdown
+
+        logger.info(f"Game timer started with countdown={countdown} seconds in mode={self.mode}.")
 
         # Load events for the guild and mode
         self.static_events = self.events_manager.get_static_events(self.guild_id, self.mode)
         self.periodic_events = self.events_manager.get_periodic_events(self.guild_id, self.mode)
-
-        logger.info(f"Game timer started with countdown={countdown} seconds in mode={self.mode}.")
 
         # Start the timer task
         if not self.timer_task.is_running():
@@ -92,9 +96,15 @@ class GameTimer:
         """Main timer loop that checks events every second."""
         if self.paused:
             await self.pause_event.wait()
-
         self.time_elapsed += 1
         logger.debug(f"Time elapsed: {self.time_elapsed} seconds")
+
+        try:
+            await self._check_static_events()
+            await self._check_periodic_events()
+        except Exception as e:
+            logger.error(f"Error in timer_task: {e}", exc_info=True)
+
 
         # Only check events if time_elapsed is non-negative (countdown has completed)
         if self.time_elapsed >= 0:
