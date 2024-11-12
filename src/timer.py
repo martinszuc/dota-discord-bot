@@ -9,6 +9,7 @@ from src.timers.glyph import GlyphTimer
 from src.timers.roshan import RoshanTimer
 from src.timers.tormentor import TormentorTimer
 from src.timers.mindful import MindfulTimer
+from src.utils.utils import min_to_sec
 
 class GameTimer:
     """Class to manage the game timer and events."""
@@ -34,9 +35,21 @@ class GameTimer:
         self.periodic_events = {}
 
     async def start(self, channel, countdown):
-        """Start the game timer with either a countdown or an elapsed time."""
+        """Start the game timer with a countdown or elapsed time based on the input format."""
         self.channel = channel
-        self.time_elapsed = -countdown if countdown < 0 else countdown
+
+        # Determine if countdown is MM:SS format or seconds
+        if isinstance(countdown, str) and ":" in countdown:
+            seconds = min_to_sec(countdown.strip("-"))
+        else:
+            seconds = int(countdown)
+
+        # If countdown is negative, start immediately with elapsed time equal to the positive value
+        if countdown.startswith("-"):
+            self.time_elapsed = seconds
+        else:
+            self.time_elapsed = -seconds  # Start with a delay if countdown is positive
+
         self.paused = False
         self.pause_event.set()
 
@@ -79,14 +92,17 @@ class GameTimer:
         """Main timer loop that checks events every second."""
         if self.paused:
             await self.pause_event.wait()
+
         self.time_elapsed += 1
         logger.debug(f"Time elapsed: {self.time_elapsed} seconds")
 
-        try:
-            await self._check_static_events()
-            await self._check_periodic_events()
-        except Exception as e:
-            logger.error(f"Error in timer_task: {e}", exc_info=True)
+        # Only check events if time_elapsed is non-negative (countdown has completed)
+        if self.time_elapsed >= 0:
+            try:
+                await self._check_static_events()
+                await self._check_periodic_events()
+            except Exception as e:
+                logger.error(f"Error in timer_task: {e}", exc_info=True)
 
     async def _check_static_events(self):
         """Check and trigger static events."""
