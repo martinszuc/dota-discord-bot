@@ -9,13 +9,13 @@ regular_static_events = [
     {"mode": "regular", "time": min_to_sec("03:00"), "message": "Glyph is now available!"},
 # Tormentor
     {"mode": "regular", "time": min_to_sec("19:00"), "message": "First Tormentor in 1 minute!"},
-    {"mode": "regular", "time": min_to_sec("20:00"), "message": "First Tormentor has spawned!"},
+    {"mode": "regular", "time": min_to_sec("20:00"), "message": "Tormentor has spawned!"},
 # Neutrals
     {"mode": "regular", "time": min_to_sec("36:40"), "message": "New neutral items!"},
     {"mode": "regular", "time": min_to_sec("59:30"), "message": "New neutral items in 30 seconds!"},
     {"mode": "regular", "time": min_to_sec("60:00"), "message": "New neutral items!"},
 # Items
-    {"mode": "turbo", "time": min_to_sec("15:00"), "message": "Shard available!"},
+    {"mode": "regular", "time": min_to_sec("15:00"), "message": "Shard available!"},
 ]
 
 
@@ -29,11 +29,15 @@ regular_periodic_events = [
 # Creeps
     {"mode": "regular", "start_time": min_to_sec("03:00"), "interval": min_to_sec("01:00"), "end_time": min_to_sec("10:00"), "message": "Flagbearer just spawned!"},
     {"mode": "regular", "start_time": min_to_sec("04:30"), "interval": min_to_sec("05:00"), "end_time": min_to_sec("99:00"), "message": "Siege Creep in 30 seconds!"},
+    {"mode": "regular", "start_time": min_to_sec("20:00"), "interval": min_to_sec("10:00"), "end_time": min_to_sec("99:00"), "message": "Roshan bottom side!"},
+    {"mode": "regular", "start_time": min_to_sec("25:00"), "interval": min_to_sec("10:00"), "end_time": min_to_sec("99:00"), "message": "Roshan top side!"},
 # Lotus
     {"mode": "regular", "start_time": min_to_sec("02:30"), "interval": min_to_sec("03:00"), "end_time": min_to_sec("16:00"), "message": "Lotus pool in 30 seconds!"},
     {"mode": "regular", "start_time": min_to_sec("03:00"), "interval": min_to_sec("03:00"), "end_time": min_to_sec("16:00"), "message": "Lotus spawned!"},
 # Neutrals
     {"mode": "regular", "start_time": min_to_sec("07:00"), "interval": min_to_sec("10:00"), "end_time": min_to_sec("27:05"), "message": "New neutral items available!"},
+# Items
+    {"mode": "regular", "start_time": min_to_sec("02:15"), "interval": min_to_sec("02:15"), "end_time": min_to_sec("07:30"), "message": "Wards now available!"},
 ]
 
 turbo_static_events = [
