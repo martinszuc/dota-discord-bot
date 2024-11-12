@@ -3,3 +3,4 @@ prefix: "!"
 timer_channel: "timer-bot"
 voice_channel: "DOTA"
 database_url: "sqlite:///bot.db"
+console_log_level: "INFO"  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
