@@ -4,6 +4,7 @@ import asyncio
 import ctypes.util
 import os
 import signal
+import re
 
 import discord
 from discord.ext import commands
@@ -151,8 +152,8 @@ async def load_cogs():
 async def start_game(ctx, countdown: str, *args):
     logger.debug(f"Command '!start' invoked by '{ctx.author}' with countdown='{countdown}' and args={args}")
     try:
-        # Validate that countdown is either MM:SS or a signed integer
-        if not (countdown.startswith("-") and countdown[1:].isdigit()) and not countdown.replace(":", "").isdigit():
+        # Validate that countdown is either MM:SS with optional leading '-' or a signed integer
+        if not re.match(r"^-?\d+$", countdown) and not re.match(r"^-?\d{1,2}:\d{2}$", countdown):
             await ctx.send("Please enter a valid countdown format (MM:SS or signed integer in seconds).")
             logger.error(f"Invalid countdown format provided by '{ctx.author}'. Context: {ctx.message.content}")
             return
