@@ -69,12 +69,12 @@ class MindfulTimer(BaseTimer):
         try:
             # Check if mindful messages are enabled, stop if disabled
             if not self.game_timer.events_manager.mindful_messages_enabled(self.game_timer.guild_id):
-                logger.info(f"Mindful messages are disabled for guild ID {self.game_timer.guild_id}. Stopping MindfulTimer.")
+                logger.info(f"Mindful: messages are disabled for guild ID {self.game_timer.guild_id}. Stopping MindfulTimer.")
                 return  # Exit _run_timer if messages are disabled
 
             # Initial delay before the first message (10 to 15 minutes)
             initial_delay = random.randint(self.min_interval, self.max_interval)
-            logger.debug(f"Initial delay set to {initial_delay} seconds.")
+            logger.debug(f"Mindful: Initial delay set to {initial_delay} seconds.")
             await asyncio.sleep(initial_delay)
 
             while self.is_running:
