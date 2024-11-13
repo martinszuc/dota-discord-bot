@@ -3,26 +3,24 @@
 import asyncio
 import random
 import os
-
 import discord
-
 from src.communication.announcement import Announcement
 from src.timers.base import BaseTimer
-from src.utils.config import logger, MINDFUL_AUDIO_DIR  # Ensure MINDFUL_AUDIO_DIR is defined in config
+from src.utils.config import logger, MINDFUL_AUDIO_DIR
 from src.event_definitions import mindful_messages, mindful_pre_messages
 
 
 class MindfulTimer(BaseTimer):
-    """Class to manage periodic mindful message announcements, with random text or audio selection."""
+    """Manages periodic mindful message announcements, with text and optional audio selection."""
 
-    def __init__(self, game_timer, min_interval=600, max_interval=900, audio_chance=0.09):
+    def __init__(self, game_timer, min_interval=600, max_interval=900, audio_chance=0.10):
         """
-        Initialize MindfulTimer with text and optional audio message functionality.
+        Initialize MindfulTimer with text and optional audio functionality.
 
         :param game_timer: Reference to the main game timer
-        :param min_interval: Minimum time interval between messages
-        :param max_interval: Maximum time interval between messages
-        :param audio_chance: Probability (0 to 1) of selecting an audio file instead of text for each announcement
+        :param min_interval: Minimum interval (seconds) between messages
+        :param max_interval: Maximum interval (seconds) between messages
+        :param audio_chance: Probability (0 to 1) of sending an audio message
         """
         super().__init__(game_timer)
         self.announcement = Announcement()
@@ -30,8 +28,7 @@ class MindfulTimer(BaseTimer):
         self.max_interval = max_interval
         self.audio_chance = audio_chance
         self.audio_files = self._load_audio_files()
-        logger.debug(
-            f"MindfulTimer initialized for guild ID {self.game_timer.guild_id} with interval {self.min_interval}-{self.max_interval}s and audio chance {self.audio_chance}.")
+        logger.debug(f"MindfulTimer initialized for guild ID {self.game_timer.guild_id} with intervals {self.min_interval}-{self.max_interval}s and audio chance {self.audio_chance}.")
 
     def _load_audio_files(self):
         """Load available .mp3 files from the audio directory."""
@@ -43,55 +40,56 @@ class MindfulTimer(BaseTimer):
         return audio_files
 
     async def _play_audio_with_tts_intro(self, channel):
-        """Play a TTS message followed by a random .mp3 audio file in the voice channel."""
-        if not self.audio_files:
-            logger.warning("No audio files available to play.")
-            return
-        if not self.game_timer.voice_client or not self.game_timer.voice_client.is_connected():
-            logger.warning("Voice client is not connected; cannot play audio.")
+        """Play a TTS message followed by an audio file in the voice channel."""
+        if not self.audio_files or not self.game_timer.voice_client or not self.game_timer.voice_client.is_connected():
+            logger.warning("Unable to play audio. Ensure audio files are available and the bot is connected to a voice channel.")
             return
 
-        # Send a mindful TTS message
+        # Send a TTS message before playing audio
         message = random.choice(mindful_pre_messages)["message"]
         await self.announcement.announce(self.game_timer, message)
-        logger.info(f"Mindful TTS message sent in guild ID {self.game_timer.guild_id}: '{message}'")
+        logger.info(f"Sent mindful TTS message in guild ID {self.game_timer.guild_id}: '{message}'")
 
         # Short delay before playing audio
         await asyncio.sleep(2)
 
-        # Play the audio file
+        # Play a random audio file
         audio_file = random.choice(self.audio_files)
         audio_source = discord.FFmpegPCMAudio(audio_file)
         self.game_timer.voice_client.play(audio_source)
         logger.info(f"Playing mindful audio in guild ID {self.game_timer.guild_id}: {audio_file}")
 
-        # Wait until audio finishes playing
+        # Wait for audio to finish playing
         while self.game_timer.voice_client.is_playing():
             await asyncio.sleep(0.1)
 
     async def _run_timer(self, channel):
         """Send a random mindful message or audio with TTS intro at random intervals while enabled."""
-        logger.info(f"MindfulTimer running for guild ID {self.game_timer.guild_id}.")
+        logger.info(f"Starting MindfulTimer for guild ID {self.game_timer.guild_id}.")
         try:
-            while self.is_running:
-                if not self.game_timer.events_manager.mindful_messages_enabled(self.game_timer.guild_id):
-                    logger.debug(
-                        f"Mindful messages are disabled for guild ID {self.game_timer.guild_id}. Waiting before next check.")
-                    await asyncio.sleep(self.max_interval)
-                    continue
+            # Check if mindful messages are enabled, stop if disabled
+            if not self.game_timer.events_manager.mindful_messages_enabled(self.game_timer.guild_id):
+                logger.info(f"Mindful messages are disabled for guild ID {self.game_timer.guild_id}. Stopping MindfulTimer.")
+                return  # Exit _run_timer if messages are disabled
 
-                # Decide randomly between sending a text message or a TTS with audio file
+            # Initial delay before the first message (10 to 15 minutes)
+            initial_delay = random.randint(self.min_interval, self.max_interval)
+            logger.debug(f"Initial delay set to {initial_delay} seconds.")
+            await asyncio.sleep(initial_delay)
+
+            while self.is_running:
+                # Randomly choose between a text or audio message
                 if random.random() < self.audio_chance and self.audio_files:
                     await self._play_audio_with_tts_intro(channel)
                 else:
                     message = random.choice(mindful_messages)["message"]
                     await self.announcement.announce(self.game_timer, message)
-                    logger.info(f"Mindful text message sent in guild ID {self.game_timer.guild_id}: '{message}'")
+                    logger.info(f"Sent mindful text message in guild ID {self.game_timer.guild_id}: '{message}'")
 
-                # Wait for a random interval between min_interval and max_interval before sending the next message
-                random_interval = random.randint(self.min_interval, self.max_interval)
-                logger.debug(f"MindfulTimer will wait for {random_interval} seconds before next message.")
-                await asyncio.sleep(random_interval)
+                # Set a random interval between min_interval and max_interval for the next message
+                next_interval = random.randint(self.min_interval, self.max_interval)
+                logger.debug(f"Waiting {next_interval} seconds until the next mindful message.")
+                await asyncio.sleep(next_interval)
 
         except asyncio.CancelledError:
             logger.info(f"MindfulTimer task cancelled for guild ID {self.game_timer.guild_id}.")
