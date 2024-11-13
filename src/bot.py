@@ -136,10 +136,11 @@ def is_admin():
 # Load all cogs in the 'cogs' directory
 async def load_cogs():
     logger.info("Loading cogs...")
-    # Ensure COGS_DIRECTORY is a relative import path format
+    # Get only the relative path part for importing
     for filename in os.listdir(COGS_DIRECTORY):
         if filename.endswith('.py') and not filename.startswith('__'):
-            extension = os.path.join(COGS_DIRECTORY, filename).replace('/', '.').replace('\\', '.').replace('.py', '')
+            # Build the import path using a relative path from `src.cogs`
+            extension = f"src.cogs.{filename[:-3]}"
             try:
                 await bot.load_extension(extension)
                 logger.info(f"Loaded cog: {extension}")
