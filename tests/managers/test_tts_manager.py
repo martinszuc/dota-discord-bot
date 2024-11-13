@@ -1,10 +1,10 @@
 # tests/managers/test_tts_manager.py
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch, ANY
 import os
 import hashlib
-import asyncio  # Add this import
+import asyncio
 
 from src.managers.tts_manager import TTSManager
 from src.utils.config import TTS_CACHE_DIR
@@ -163,8 +163,8 @@ async def test_play_tts_with_existing_audio(tts_manager, mock_voice_client, mock
         # Verify PCMVolumeTransformer was instantiated with correct volume
         mock_pcm_volume.assert_called_once_with(mock_audio_source, volume=tts_manager.volume)
 
-        # Verify that voice_client.play was called with the volume-controlled audio
-        mock_voice_client.play.assert_called_once_with(mock_volume_transformer, after=MagicMock())
+        # Verify that voice_client.play was called with the volume-controlled audio and any 'after' callable
+        mock_voice_client.play.assert_called_once_with(mock_volume_transformer, after=ANY)
 
         # Verify logging
         mock_logger_info.assert_any_call(
