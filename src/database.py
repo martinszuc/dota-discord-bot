@@ -23,6 +23,7 @@ class ServerSettings(Base):
     timer_channel = Column(String, default="timer-bot", nullable=False)
     voice_channel = Column(String, default="DOTA", nullable=False)
     tts_language = Column(String, default="en-US-AriaNeural", nullable=False)
+    mindful_messages_enabled = Column(Integer, default=0, nullable=False)
 
 class StaticEvent(Base):
     """Model for storing static events."""
