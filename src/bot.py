@@ -11,7 +11,7 @@ from discord.ext import commands
 
 from src.managers.event_manager import EventsManager
 from src.timer import GameTimer
-from src.utils.config import PREFIX, TIMER_CHANNEL_NAME, VOICE_CHANNEL_NAME, logger
+from src.utils.config import PREFIX, TIMER_CHANNEL_NAME, VOICE_CHANNEL_NAME, logger, COGS_DIRECTORY
 from src.utils.utils import min_to_sec
 
 # Load Opus library for voice support
@@ -136,9 +136,9 @@ def is_admin():
 # Load all cogs in the 'cogs' directory
 async def load_cogs():
     logger.info("Loading cogs...")
-    for filename in os.listdir('./cogs'):
+    for filename in os.listdir(COGS_DIRECTORY):
         if filename.endswith('.py') and not filename.startswith('__'):
-            extension = f'cogs.{filename[:-3]}'
+            extension = f"{COGS_DIRECTORY.replace('/', '.')}.{filename[:-3]}"
             try:
                 await bot.load_extension(extension)
                 logger.info(f"Loaded cog: {extension}")

@@ -11,6 +11,7 @@ CONFIG_PATH = os.path.join(BASE_DIR, "config.yaml")
 LOG_DIR = os.path.join(BASE_DIR, "logs")
 TTS_CACHE_DIR = os.path.join(BASE_DIR, "tts_cache")
 MINDFUL_AUDIO_DIR = os.path.join(BASE_DIR, "audio")
+COGS_DIRECTORY = os.path.join(BASE_DIR, "src", "cogs")
 
 # Load configuration data
 def load_config():
