@@ -13,7 +13,7 @@ from src.event_definitions import mindful_messages, mindful_pre_messages
 class MindfulTimer(BaseTimer):
     """Manages periodic mindful message announcements, with text and optional audio selection."""
 
-    def __init__(self, game_timer, min_interval=600, max_interval=900, audio_chance=0.10):
+    def __init__(self, game_timer, min_interval=600, max_interval=900, audio_chance=0.07):
         """
         Initialize MindfulTimer with text and optional audio functionality.
 

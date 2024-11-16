@@ -25,8 +25,25 @@ class RoshanTimer(BaseTimer):
                 max_respawn = 11 * 60  # Regular mode: 11 minutes max respawn
                 logger.debug(f"Regular mode: Roshan respawn between {min_respawn} and {max_respawn} seconds.")
 
+            # Announce Roshan killed
             await self.announcement.announce(self.game_timer, "Roshan killed!")
             logger.info(f"Roshan killed in guild ID {self.game_timer.guild_id}. Starting respawn timer.")
+
+            # Calculate game time and respawn window
+            current_game_time_seconds = self.game_timer.time_elapsed
+            current_game_minutes = current_game_time_seconds // 60
+            min_respawn_minutes = current_game_minutes + (min_respawn // 60)
+            max_respawn_minutes = current_game_minutes + (max_respawn // 60)
+
+            # Announce respawn window after 1 seconds
+            await asyncio.sleep(1)
+            await self.announcement.announce(
+                self.game_timer,
+                f"Roshan spawn timer possible from: {min_respawn_minutes} to {max_respawn_minutes} minutes."
+            )
+            logger.info(
+                f"Announced Roshan respawn window: {min_respawn_minutes} to {max_respawn_minutes} minutes for guild ID {self.game_timer.guild_id}."
+            )
 
             # Announce 5-minute warning
             await asyncio.sleep(min_respawn - 300)
@@ -55,7 +72,8 @@ class RoshanTimer(BaseTimer):
             # Final announcement before max respawn
             await asyncio.sleep(60)
             if not self.is_running:
-                logger.info(f"RoshanTimer stopped before final respawn announcement for guild ID {self.game_timer.guild_id}.")
+                logger.info(
+                    f"RoshanTimer stopped before final respawn announcement for guild ID {self.game_timer.guild_id}.")
                 return
             await self.announcement.announce(self.game_timer, "Roshan may be up!")
             logger.info(f"Final warning before Roshan respawn in guild ID {self.game_timer.guild_id}.")
@@ -63,7 +81,8 @@ class RoshanTimer(BaseTimer):
             # Wait for the remaining time until max respawn
             await asyncio.sleep(max_respawn - min_respawn)
             if not self.is_running:
-                logger.info(f"RoshanTimer stopped before final respawn announcement for guild ID {self.game_timer.guild_id}.")
+                logger.info(
+                    f"RoshanTimer stopped before final respawn announcement for guild ID {self.game_timer.guild_id}.")
                 return
             await self.announcement.announce(self.game_timer, "Roshan is up for sure!")
             logger.info(f"Roshan has respawned in guild ID {self.game_timer.guild_id}.")
