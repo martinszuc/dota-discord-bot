@@ -48,40 +48,34 @@ if __name__ == "__main__":
     send_message(' '.join(sys.argv[1:]))
 ```
 
-#### Other Command Scripts
-
+### Other Command Scripts
+#### command_rosh.sh
 ```bash
-# command_rosh.sh
 #!/bin/bash
 python3 ~/dota2_bot/scripts/send_discord_message.py '!rosh'
 ```
-
+#### command_glyph.sh
 ```bash
-# command_glyph.sh
 #!/bin/bash
 python3 ~/dota2_bot/scripts/send_discord_message.py '!glyph'
 ```
-
+#### command_tormentor.sh
 ```bash
-# command_tormentor.sh
 #!/bin/bash
 python3 ~/dota2_bot/scripts/send_discord_message.py '!tormentor'
 ```
-
+#### command_start.sh
 ```bash
-# command_start.sh
 #!/bin/bash
 python3 ~/dota2_bot/scripts/send_discord_message.py '!start 30'
 ```
-
+#### command_pause.sh
 ```bash
-# command_pause.sh
 #!/bin/bash
 python3 ~/dota2_bot/scripts/send_discord_message.py '!pause'
 ```
-
+#### command_unpause.sh
 ```bash
-# command_unpause.sh
 #!/bin/bash
 python3 ~/dota2_bot/scripts/send_discord_message.py '!unpause'
 ```
