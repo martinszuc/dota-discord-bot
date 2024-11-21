@@ -133,7 +133,11 @@ chmod +x ~/dota2_bot/scripts/*.sh
    ```
    xbindkeys
    ```
-
+3. Stop xbindkeys if you want to disable hotkeys:
+   ```
+   killall xbindkeys
+   ```
+   
 Test hotkeys by pressing the assigned keys. Check Discord for sent messages.
 
 ---
