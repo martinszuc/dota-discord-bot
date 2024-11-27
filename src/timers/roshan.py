@@ -39,7 +39,7 @@ class RoshanTimer(BaseTimer):
             await asyncio.sleep(1)
             await self.announcement.announce(
                 self.game_timer,
-                f"Roshan spawn timer possible from: {min_respawn_minutes} to {max_respawn_minutes} minutes."
+                f"Roshan possible from: {min_respawn_minutes} to {max_respawn_minutes} minute."
             )
             logger.info(
                 f"Announced Roshan respawn window: {min_respawn_minutes} to {max_respawn_minutes} minutes for guild ID {self.game_timer.guild_id}."
