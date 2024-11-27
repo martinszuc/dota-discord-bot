@@ -19,9 +19,12 @@ class Announcement:
         """
         # Announce in text channel
         if game_timer.channel:
-            embed = discord.Embed(description=message, color=0x00ff00)
-            await game_timer.channel.send(embed=embed)
-            logger.info(f"Sent embed message to text channel: {message}")
+            try:
+                embed = discord.Embed(description=message, color=0x00ff00)
+                await game_timer.channel.send(embed=embed)
+                logger.info(f"Sent embed message to text channel: {message}")
+            except Exception as e:
+                logger.error(f"Error sending embed message to text channel: {e}", exc_info=True)
         else:
             logger.warning("Cannot send message; text channel is not set.")
 

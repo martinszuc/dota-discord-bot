@@ -5,6 +5,7 @@ import ctypes.util
 import os
 import signal
 import re
+import logging
 
 import discord
 from discord.ext import commands
@@ -37,6 +38,7 @@ logger.debug("EventsManager instantiated.")
 
 # Data structures to keep track of game and child timers per guild
 game_timers = {}
+timer_locks = {}  # To prevent race conditions when starting/stopping timers
 logger.debug("Game timers dictionary initialized.")
 
 WEBHOOK_ID = os.getenv('WEBHOOK_ID')
@@ -149,83 +151,117 @@ async def load_cogs():
     logger.info("All cogs loaded.")
 
 
+# Reconnect Logic: Attempt to reconnect if disconnected from voice channel
+@bot.event
+async def on_voice_state_update(member, before, after):
+    if member.id != bot.user.id:
+        return
+
+    guild = member.guild
+    guild_id = guild.id
+
+    # Check if the game is active for this guild
+    if guild_id not in game_timers or not game_timers[guild_id].is_running():
+        logger.info(f"Game is not active in guild '{guild.name}'. No reconnection attempt needed.")
+        return
+
+    # If the bot was disconnected and the game is active, attempt to reconnect
+    if before.channel is not None and after.channel is None:
+        logger.warning("Bot was disconnected from a voice channel. Attempting to reconnect...")
+        dota_voice_channel = discord.utils.get(guild.voice_channels, name=VOICE_CHANNEL_NAME)
+        if dota_voice_channel:
+            try:
+                await dota_voice_channel.connect()
+                logger.info(f"Reconnected to voice channel '{dota_voice_channel.name}' in guild '{guild.name}'.")
+            except Exception as e:
+                logger.error(
+                    f"Failed to reconnect to voice channel '{dota_voice_channel.name}' in guild '{guild.name}': {e}",
+                    exc_info=True
+                )
+
+
 # Command: Start game timer
 @bot.command(name="start")
+@commands.max_concurrency(1, per=commands.BucketType.guild, wait=False)
 async def start_game(ctx, countdown: str, *args):
     logger.debug(f"Command '!start' invoked by '{ctx.author}' with countdown='{countdown}' and args={args}")
-    try:
-        # Validate that countdown is either MM:SS with optional leading '-' or a signed integer
-        if not re.match(r"^-?\d+$", countdown) and not re.match(r"^-?\d{1,2}:\d{2}$", countdown):
-            await ctx.send("Please enter a valid countdown format (MM:SS or signed integer in seconds).")
-            logger.error(f"Invalid countdown format provided by '{ctx.author}'. Context: {ctx.message.content}")
-            return
-        logger.info(
-            f"Inside start_game command: countdown='{countdown}', args={args}, guild_id={ctx.guild.id}, channel={ctx.channel.name}")
+    guild_id = ctx.guild.id
 
-        # Determine mode based on args
-        mode = 'regular'
-        for arg in args:
-            if arg.lower() in ['regular', 'turbo']:
-                mode = arg.lower()
-                logger.debug(f"Mode set to '{mode}' based on argument '{arg}'.")
+    # Initialize a lock for this guild if not present
+    if guild_id not in timer_locks:
+        timer_locks[guild_id] = asyncio.Lock()
 
-        guild_id = ctx.guild.id
+    async with timer_locks[guild_id]:
+        try:
+            # Validate that countdown is either MM:SS with optional leading '-' or a signed integer
+            if not re.match(r"^-?\d+$", countdown) and not re.match(r"^-?\d{1,2}:\d{2}$", countdown):
+                await ctx.send("Please enter a valid countdown format (MM:SS or signed integer in seconds).")
+                logger.error(f"Invalid countdown format provided by '{ctx.author}'. Context: {ctx.message.content}")
+                return
+            logger.info(
+                f"Inside start_game command: countdown='{countdown}', args={args}, guild_id={ctx.guild.id}, channel={ctx.channel.name}")
 
-        # Check if a timer is already running for this guild to ensure only one timer per guild
-        if guild_id in game_timers and game_timers[guild_id].is_running():
-            await ctx.send("A game timer is already running in this server.")
-            logger.info(f"Game timer already running for guild ID {guild_id}. Start command ignored.")
-            return
+            # Determine mode based on args
+            mode = 'regular'
+            for arg in args:
+                if arg.lower() in ['regular', 'turbo']:
+                    mode = arg.lower()
+                    logger.debug(f"Mode set to '{mode}' based on argument '{arg}'.")
 
-        # Find the voice channel
-        dota_voice_channel = discord.utils.get(ctx.guild.voice_channels, name=VOICE_CHANNEL_NAME)
-        if not dota_voice_channel:
-            await ctx.send(f"'{VOICE_CHANNEL_NAME}' voice channel not found. Please create it and try again.")
-            logger.warning(f"'{VOICE_CHANNEL_NAME}' voice channel not found in guild '{ctx.guild.name}'.")
-            return
-        else:
-            logger.info(f"Found voice channel '{VOICE_CHANNEL_NAME}' in guild '{ctx.guild.name}'.")
+            # Check if a timer is already running for this guild to ensure only one timer per guild
+            if guild_id in game_timers and game_timers[guild_id].is_running():
+                await ctx.send("A game timer is already running in this server.")
+                logger.info(f"Game timer already running for guild ID {guild_id}. Start command ignored.")
+                return
 
-        # Get the timer text channel
-        timer_text_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
-        if not timer_text_channel:
-            await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
-            logger.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
-            return
-        else:
-            logger.info(f"Found text channel '{TIMER_CHANNEL_NAME}' in guild '{ctx.guild.name}'.")
+            # Find the voice channel
+            dota_voice_channel = discord.utils.get(ctx.guild.voice_channels, name=VOICE_CHANNEL_NAME)
+            if not dota_voice_channel:
+                await ctx.send(f"'{VOICE_CHANNEL_NAME}' voice channel not found. Please create it and try again.")
+                logger.warning(f"'{VOICE_CHANNEL_NAME}' voice channel not found in guild '{ctx.guild.name}'.")
+                return
+            else:
+                logger.info(f"Found voice channel '{VOICE_CHANNEL_NAME}' in guild '{ctx.guild.name}'.")
 
-        # Announce the start of the game timer
-        await timer_text_channel.send(f"Starting {mode} game timer with countdown '{countdown}'.")
-        logger.info(
-            f"Starting game timer with mode='{mode}' and countdown='{countdown}' for guild ID {guild_id}.")
+            # Get the timer text channel
+            timer_text_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
+            if not timer_text_channel:
+                await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
+                logger.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
+                return
+            else:
+                logger.info(f"Found text channel '{TIMER_CHANNEL_NAME}' in guild '{ctx.guild.name}'.")
 
-        # Initialize and start the GameTimer
-        game_timer = GameTimer(guild_id, mode)
-        game_timer.channel = timer_text_channel
-        game_timers[guild_id] = game_timer
-        logger.debug(f"GameTimer instance created and added to game_timers for guild ID {guild_id}.")
+            # Announce the start of the game timer
+            await timer_text_channel.send(f"Starting {mode} game timer with countdown '{countdown}'.")
+            logger.info(
+                f"Starting game timer with mode='{mode}' and countdown='{countdown}' for guild ID {guild_id}.")
 
-        # Connect to the voice channel
-        voice_client = discord.utils.get(bot.voice_clients, guild=ctx.guild)
-        if voice_client is None:
-            voice_client = await dota_voice_channel.connect()
-            logger.info(f"Connected to voice channel '{dota_voice_channel.name}' in guild '{ctx.guild.name}'.")
-        elif voice_client.channel != dota_voice_channel:
-            await voice_client.move_to(dota_voice_channel)
-            logger.info(f"Moved voice client to '{dota_voice_channel.name}' in guild '{ctx.guild.name}'.")
-        game_timer.voice_client = voice_client
-        logger.debug(f"Voice client assigned to GameTimer for guild ID {guild_id}.")
+            # Initialize and start the GameTimer
+            game_timer = GameTimer(guild_id, mode)
+            game_timer.channel = timer_text_channel
+            game_timers[guild_id] = game_timer
+            logger.debug(f"GameTimer instance created and added to game_timers for guild ID {guild_id}.")
 
-        # Start the game timer with the countdown string directly
-        await game_timer.start(timer_text_channel, countdown)
-        logger.info(
-            f"Game timer successfully started by '{ctx.author}' with countdown='{countdown}' and mode='{mode}' for guild ID {guild_id}.")
+            # Connect to the voice channel
+            voice_client = discord.utils.get(bot.voice_clients, guild=ctx.guild)
+            if voice_client is None:
+                voice_client = await dota_voice_channel.connect()
+                logger.info(f"Connected to voice channel '{dota_voice_channel.name}' in guild '{ctx.guild.name}'.")
+            elif voice_client.channel != dota_voice_channel:
+                await voice_client.move_to(dota_voice_channel)
+                logger.info(f"Moved voice client to '{dota_voice_channel.name}' in guild '{ctx.guild.name}'.")
+            game_timer.voice_client = voice_client
+            logger.debug(f"Voice client assigned to GameTimer for guild ID {guild_id}.")
 
-    except Exception as e:
-        logger.error(f"Error in start_game command: {e}", exc_info=True)
-        await ctx.send("An unexpected error occurred while starting the game timer.")
+            # Start the game timer with the countdown string directly
+            await game_timer.start(timer_text_channel, countdown)
+            logger.info(
+                f"Game timer successfully started by '{ctx.author}' with countdown='{countdown}' and mode='{mode}' for guild ID {guild_id}.")
 
+        except Exception as e:
+            logger.error(f"Error in start_game command: {e}", exc_info=True)
+            await ctx.send("An unexpected error occurred while starting the game timer.")
 
 
 # Command: Stop game timer
@@ -235,34 +271,47 @@ async def stop_game(ctx):
     logger.info(f"Command '!stop' invoked by '{ctx.author}'")
     guild_id = ctx.guild.id
 
-    if guild_id in game_timers and game_timers[guild_id].is_running():
-        timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
-        if timer_channel:
-            # Stop the game timer
-            await game_timers[guild_id].stop()
-            await timer_channel.send("Game timer stopped.")
-            logger.info(f"Game timer stopped by '{ctx.author}' for guild ID {guild_id}.")
+    # Initialize a lock for this guild if not present
+    if guild_id not in timer_locks:
+        timer_locks[guild_id] = asyncio.Lock()
 
-            # Remove the timer from the dictionary
-            del game_timers[guild_id]
-            logger.debug(f"GameTimer removed from game_timers for guild ID {guild_id}.")
-        else:
-            await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
-            logger.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
-    else:
-        logger.warning(f"'{ctx.author}' attempted to stop the timer, but it was not running.")
+    async with timer_locks[guild_id]:
+        if guild_id in game_timers and game_timers[guild_id].is_running():
+            timer_channel = discord.utils.get(ctx.guild.text_channels, name=TIMER_CHANNEL_NAME)
+            if timer_channel:
+                # Stop the game timer
+                try:
+                    await game_timers[guild_id].stop()
+                    await timer_channel.send("Game timer stopped.")
+                    logger.info(f"Game timer stopped by '{ctx.author}' for guild ID {guild_id}.")
+                except Exception as e:
+                    logger.error(f"Error stopping game timer for guild ID {guild_id}: {e}", exc_info=True)
+                    await ctx.send("An error occurred while stopping the game timer.")
 
-    # Disconnect from the voice channel
-    voice_client = discord.utils.get(bot.voice_clients, guild=ctx.guild)
-    if voice_client:
-        await voice_client.disconnect()
-        if guild_id in game_timers:
-            game_timers[guild_id].voice_client = None
-            logger.debug(f"Voice client disconnected for guild ID {guild_id}.")
+                # Remove the timer from the dictionary
+                del game_timers[guild_id]
+                logger.debug(f"GameTimer removed from game_timers for guild ID {guild_id}.")
+            else:
+                await ctx.send(f"Channel '{TIMER_CHANNEL_NAME}' not found. Please create one and try again.")
+                logger.error(f"Channel '{TIMER_CHANNEL_NAME}' not found in guild '{ctx.guild.name}'.")
         else:
-            logger.debug(f"Voice client disconnected for guild ID {guild_id}, but no GameTimer found.")
-    else:
-        logger.warning("Voice client was not connected.")
+            await ctx.send("No active game timer found.")
+            logger.warning(f"'{ctx.author}' attempted to stop the timer, but it was not running.")
+
+        # Disconnect from the voice channel
+        voice_client = discord.utils.get(bot.voice_clients, guild=ctx.guild)
+        if voice_client:
+            try:
+                await voice_client.disconnect()
+                if guild_id in game_timers:
+                    game_timers[guild_id].voice_client = None
+                    logger.debug(f"Voice client disconnected for guild ID {guild_id}.")
+                else:
+                    logger.debug(f"Voice client disconnected for guild ID {guild_id}, but no GameTimer found.")
+            except Exception as e:
+                logger.error(f"Error disconnecting voice client for guild ID {guild_id}: {e}", exc_info=True)
+        else:
+            logger.warning("Voice client was not connected.")
 
 
 # Command: Pause game timer
@@ -271,15 +320,21 @@ async def pause_game(ctx):
     """Pause the game timer and all events."""
     logger.info(f"Command '!pause' invoked by '{ctx.author}'")
     guild_id = ctx.guild.id
+
     if guild_id in game_timers and game_timers[guild_id].is_running():
         if game_timers[guild_id].is_paused():
             await ctx.send("Game timer is already paused.")
             logger.warning(f"'{ctx.author}' attempted to pause the timer, but it was already paused.")
         else:
-            await game_timers[guild_id].pause()
-            await ctx.send("Game timer paused.")
-            logger.info(f"Game timer and all child timers paused by '{ctx.author}' for guild ID {guild_id}.")
+            try:
+                await game_timers[guild_id].pause()
+                await ctx.send("Game timer paused.")
+                logger.info(f"Game timer and all child timers paused by '{ctx.author}' for guild ID {guild_id}.")
+            except Exception as e:
+                logger.error(f"Error pausing game timer for guild ID {guild_id}: {e}", exc_info=True)
+                await ctx.send("An error occurred while pausing the game timer.")
     else:
+        await ctx.send("No active game timer found.")
         logger.warning(f"'{ctx.author}' attempted to pause the timer, but it was not running.")
 
 
@@ -289,15 +344,21 @@ async def unpause_game(ctx):
     """Resume the game timer and all events."""
     logger.info(f"Command '!unpause' invoked by '{ctx.author}'")
     guild_id = ctx.guild.id
+
     if guild_id in game_timers and game_timers[guild_id].is_running():
         if not game_timers[guild_id].is_paused():
             await ctx.send("Game timer is not paused.")
             logger.warning(f"'{ctx.author}' attempted to unpause the timer, but it was not paused.")
         else:
-            await game_timers[guild_id].unpause()
-            await ctx.send("Game timer resumed.")
-            logger.info(f"Game timer and all child timers resumed by '{ctx.author}' for guild ID {guild_id}.")
+            try:
+                await game_timers[guild_id].unpause()
+                await ctx.send("Game timer resumed.")
+                logger.info(f"Game timer and all child timers resumed by '{ctx.author}' for guild ID {guild_id}.")
+            except Exception as e:
+                logger.error(f"Error unpausing game timer for guild ID {guild_id}: {e}", exc_info=True)
+                await ctx.send("An error occurred while resuming the game timer.")
     else:
+        await ctx.send("No active game timer found.")
         logger.warning(f"'{ctx.author}' attempted to unpause the timer, but it was not running.")
 
 
@@ -316,9 +377,13 @@ async def rosh_timer_command(ctx):
     if timer_channel:
         roshan_timer = game_timers[guild_id].roshan_timer
         if not roshan_timer.is_running:
-            await roshan_timer.start(timer_channel)
-            await timer_channel.send("Roshan timer started.")
-            logger.info(f"Roshan timer started by '{ctx.author}' for guild ID {guild_id}.")
+            try:
+                await roshan_timer.start(timer_channel)
+                await timer_channel.send("Roshan timer started.")
+                logger.info(f"Roshan timer started by '{ctx.author}' for guild ID {guild_id}.")
+            except Exception as e:
+                logger.error(f"Error starting Roshan timer for guild ID {guild_id}: {e}", exc_info=True)
+                await ctx.send("An error occurred while starting the Roshan timer.")
         else:
             await ctx.send("Roshan timer is already running.")
             logger.warning(f"'{ctx.author}' attempted to start Roshan timer, but it was already running.")
@@ -337,13 +402,18 @@ async def cancel_rosh_command(ctx):
     if guild_id in game_timers:
         roshan_timer = game_timers[guild_id].roshan_timer
         if roshan_timer.is_running:
-            await roshan_timer.stop()
-            await timer_channel.send("Roshan timer has been cancelled.")
-            logger.info(f"Roshan timer cancelled by '{ctx.author}' for guild ID {guild_id}.")
+            try:
+                await roshan_timer.stop()
+                await timer_channel.send("Roshan timer has been cancelled.")
+                logger.info(f"Roshan timer cancelled by '{ctx.author}' for guild ID {guild_id}.")
+            except Exception as e:
+                logger.error(f"Error cancelling Roshan timer for guild ID {guild_id}: {e}", exc_info=True)
+                await ctx.send("An error occurred while cancelling the Roshan timer.")
         else:
             await ctx.send("No active Roshan timer to cancel.")
             logger.warning(f"No active Roshan timer found to cancel for guild ID {guild_id}.")
     else:
+        await ctx.send("Game timer is not active.")
         logger.warning(f"'{ctx.author}' attempted to cancel Roshan timer, but game timer is not active.")
 
 
@@ -362,9 +432,13 @@ async def glyph_timer_command(ctx):
     if timer_channel:
         glyph_timer = game_timers[guild_id].glyph_timer
         if not glyph_timer.is_running:
-            await glyph_timer.start(timer_channel)
-            await timer_channel.send("Glyph timer started.")
-            logger.info(f"Glyph timer started by '{ctx.author}' for guild ID {guild_id}.")
+            try:
+                await glyph_timer.start(timer_channel)
+                await timer_channel.send("Glyph timer started.")
+                logger.info(f"Glyph timer started by '{ctx.author}' for guild ID {guild_id}.")
+            except Exception as e:
+                logger.error(f"Error starting Glyph timer for guild ID {guild_id}: {e}", exc_info=True)
+                await ctx.send("An error occurred while starting the Glyph timer.")
         else:
             await ctx.send("Glyph timer is already running.")
             logger.warning(f"'{ctx.author}' attempted to start Glyph timer, but it was already running.")
@@ -383,13 +457,18 @@ async def cancel_glyph_command(ctx):
     if guild_id in game_timers:
         glyph_timer = game_timers[guild_id].glyph_timer
         if glyph_timer.is_running:
-            await glyph_timer.stop()
-            await timer_channel.send("Glyph timer has been cancelled.")
-            logger.info(f"Glyph timer cancelled by '{ctx.author}' for guild ID {guild_id}.")
+            try:
+                await glyph_timer.stop()
+                await timer_channel.send("Glyph timer has been cancelled.")
+                logger.info(f"Glyph timer cancelled by '{ctx.author}' for guild ID {guild_id}.")
+            except Exception as e:
+                logger.error(f"Error cancelling Glyph timer for guild ID {guild_id}: {e}", exc_info=True)
+                await ctx.send("An error occurred while cancelling the Glyph timer.")
         else:
             await ctx.send("No active Glyph timer to cancel.")
             logger.warning(f"No active Glyph timer found to cancel for guild ID {guild_id}.")
     else:
+        await ctx.send("Game timer is not active.")
         logger.warning(f"'{ctx.author}' attempted to cancel Glyph timer, but game timer is not active.")
 
 
@@ -408,9 +487,13 @@ async def tormentor_timer_command(ctx):
     if timer_channel:
         tormentor_timer = game_timers[guild_id].tormentor_timer
         if not tormentor_timer.is_running:
-            await tormentor_timer.start(timer_channel)
-            await timer_channel.send("Tormentor timer started.")
-            logger.info(f"Tormentor timer started by '{ctx.author}' for guild ID {guild_id}.")
+            try:
+                await tormentor_timer.start(timer_channel)
+                await timer_channel.send("Tormentor timer started.")
+                logger.info(f"Tormentor timer started by '{ctx.author}' for guild ID {guild_id}.")
+            except Exception as e:
+                logger.error(f"Error starting Tormentor timer for guild ID {guild_id}: {e}", exc_info=True)
+                await ctx.send("An error occurred while starting the Tormentor timer.")
         else:
             await ctx.send("Tormentor timer is already running.")
             logger.warning(f"'{ctx.author}' attempted to start Tormentor timer, but it was already running.")
@@ -429,13 +512,18 @@ async def cancel_tormentor_command(ctx):
     if guild_id in game_timers:
         tormentor_timer = game_timers[guild_id].tormentor_timer
         if tormentor_timer.is_running:
-            await tormentor_timer.stop()
-            await timer_channel.send("Tormentor timer has been cancelled.")
-            logger.info(f"Tormentor timer cancelled by '{ctx.author}' for guild ID {guild_id}.")
+            try:
+                await tormentor_timer.stop()
+                await timer_channel.send("Tormentor timer has been cancelled.")
+                logger.info(f"Tormentor timer cancelled by '{ctx.author}' for guild ID {guild_id}.")
+            except Exception as e:
+                logger.error(f"Error cancelling Tormentor timer for guild ID {guild_id}: {e}", exc_info=True)
+                await ctx.send("An error occurred while cancelling the Tormentor timer.")
         else:
             await ctx.send("No active Tormentor timer to cancel.")
             logger.warning(f"No active Tormentor timer found to cancel for guild ID {guild_id}.")
     else:
+        await ctx.send("Game timer is not active.")
         logger.warning(f"'{ctx.author}' attempted to cancel Tormentor timer, but game timer is not active.")
 
 
@@ -509,7 +597,8 @@ async def remove_event_command(ctx, event_id: int):
             logger.warning(f"Event ID {event_id} not found for removal by '{ctx.author}' in guild ID {guild_id}.")
     except Exception as e:
         await ctx.send(f"Error removing event: {e}")
-        logger.error(f"Error removing event ID {event_id} by '{ctx.author}' for guild ID {guild_id}: {e}", exc_info=True)
+        logger.error(f"Error removing event ID {event_id} by '{ctx.author}' for guild ID {guild_id}: {e}",
+                     exc_info=True)
 
 
 # Command: List custom events
@@ -589,18 +678,66 @@ async def reset_events_command(ctx):
 @bot.command(name="enable-mindful", aliases=['enable-pma', 'pma'])
 async def enable_mindful_messages(ctx):
     guild_id = ctx.guild.id
-    events_manager.set_mindful_messages(guild_id, enabled=True)
-    await ctx.send("Mindful messages have been enabled.")
-    logger.info(f"Mindful messages enabled by '{ctx.author}' in guild ID {guild_id}.")
+    try:
+        events_manager.set_mindful_messages(guild_id, enabled=True)
+        await ctx.send("Mindful messages have been enabled.")
+        logger.info(f"Mindful messages enabled by '{ctx.author}' in guild ID {guild_id}.")
+    except Exception as e:
+        await ctx.send("An error occurred while enabling mindful messages.")
+        logger.error(f"Error enabling mindful messages for guild ID {guild_id} by '{ctx.author}': {e}", exc_info=True)
 
 
 # Command: Disable mindful messages
 @bot.command(name="disable-mindful", aliases=['disable-pma', 'no-pma'])
 async def disable_mindful_messages(ctx):
     guild_id = ctx.guild.id
-    events_manager.set_mindful_messages(guild_id, enabled=False)
-    await ctx.send("Mindful messages have been disabled.")
-    logger.info(f"Mindful messages disabled by '{ctx.author}' in guild ID {guild_id}.")
+    try:
+        events_manager.set_mindful_messages(guild_id, enabled=False)
+        await ctx.send("Mindful messages have been disabled.")
+        logger.info(f"Mindful messages disabled by '{ctx.author}' in guild ID {guild_id}.")
+    except Exception as e:
+        await ctx.send("An error occurred while disabling mindful messages.")
+        logger.error(f"Error disabling mindful messages for guild ID {guild_id} by '{ctx.author}': {e}", exc_info=True)
+
+
+# Command: Kill all game timers across all guilds
+@bot.command(name="killall")
+@is_admin()
+async def kill_all_game_timers(ctx):
+    """Stop all game timers across all guilds."""
+    logger.info(f"Command '!killall' invoked by '{ctx.author}'")
+    guild_ids = list(game_timers.keys())
+    if not guild_ids:
+        await ctx.send("There are no active game timers to kill.")
+        logger.info("No active game timers found to kill.")
+        return
+
+    for guild_id in guild_ids:
+        timer_lock = timer_locks.get(guild_id)
+        if timer_lock:
+            async with timer_lock:
+                timer = game_timers.get(guild_id)
+                if timer and timer.is_running():
+                    try:
+                        await timer.stop()
+                        # Send a message to the guild's timer channel
+                        guild = bot.get_guild(guild_id)
+                        if guild:
+                            timer_channel = discord.utils.get(guild.text_channels, name=TIMER_CHANNEL_NAME)
+                            if timer_channel:
+                                await timer_channel.send("Game timer has been forcefully stopped by an admin.")
+                                logger.info(f"Game timer forcefully stopped in guild '{guild.name}' by '!killall'.")
+                        # Disconnect from voice channel
+                        voice_client = discord.utils.get(bot.voice_clients, guild=guild)
+                        if voice_client:
+                            await voice_client.disconnect()
+                            logger.info(f"Disconnected from voice channel in guild '{guild.name}'.")
+                        # Remove from game_timers
+                        del game_timers[guild_id]
+                    except Exception as e:
+                        logger.error(f"Error killing game timer for guild ID {guild_id}: {e}", exc_info=True)
+    await ctx.send("All game timers have been stopped.")
+    logger.info("All game timers have been killed by '!killall'.")
 
 
 # Graceful shutdown handling
@@ -609,13 +746,14 @@ async def shutdown():
 
     # Stop all game timers quickly
     logger.info("Stopping all game timers.")
-    for guild_id, timer in game_timers.items():
-        if timer.is_running():
-            try:
-                await asyncio.wait_for(timer.stop(), timeout=2)  # Set a shorter timeout for each stop call
-                logger.info(f"Stopped GameTimer for guild ID {guild_id}.")
-            except asyncio.TimeoutError:
-                logger.warning(f"Timer for guild ID {guild_id} took too long to stop; forced stop.")
+    for guild_id, timer in list(game_timers.items()):
+        try:
+            await asyncio.wait_for(timer.stop(), timeout=2)  # Set a shorter timeout for each stop call
+            logger.info(f"Stopped GameTimer for guild ID {guild_id}.")
+        except asyncio.TimeoutError:
+            logger.warning(f"Timer for guild ID {guild_id} took too long to stop; forced stop.")
+        except Exception as e:
+            logger.error(f"Error stopping GameTimer for guild ID {guild_id}: {e}", exc_info=True)
 
     # Disconnect all voice clients with a timeout
     logger.info("Disconnecting all voice clients.")
@@ -625,6 +763,8 @@ async def shutdown():
         logger.info("All voice clients disconnected.")
     except asyncio.TimeoutError:
         logger.warning("Some voice clients did not disconnect within the timeout.")
+    except Exception as e:
+        logger.error(f"Error disconnecting voice clients: {e}", exc_info=True)
 
     # Close the EventsManager session quickly
     events_manager.close()

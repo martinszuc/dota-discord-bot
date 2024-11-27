@@ -5,6 +5,7 @@ import discord
 from discord.ext import commands
 from src.utils.config import PREFIX
 
+
 class HelpCog(commands.Cog):
     """A Cog for handling the help command."""
 
@@ -23,8 +24,8 @@ class HelpCog(commands.Cog):
         categories = {
             "📅 **Game Timer**": [
                 {
-                    "name": f"{self.prefix}start <countdown [sec]> [mode]",
-                    "value": "Starts the game timer.\n**Example:** `{0}start 45` or `{0}start 60 turbo`".format(self.prefix)
+                    "name": f"{self.prefix}start <countdown> [mode]",
+                    "value": "Starts the game timer.\n**Example:** `{0}start 45` or `{0}start -10:00 turbo`".format(self.prefix)
                 },
                 {
                     "name": f"{self.prefix}stop",
@@ -35,8 +36,12 @@ class HelpCog(commands.Cog):
                     "value": "Pauses the game timer and all events."
                 },
                 {
-                    "name": f"{self.prefix}unpause *(Alias: `unp`, `up`)*",
+                    "name": f"{self.prefix}unpause *(Aliases: `unp`, `up`)*",
                     "value": "Resumes the game timer and all events."
+                },
+                {
+                    "name": f"{self.prefix}killall",
+                    "value": "Stops all active game timers across all guilds. *(Admin only)*"
                 }
             ],
             "🛡️ **Roshan Timer**": [
@@ -63,6 +68,10 @@ class HelpCog(commands.Cog):
                 {
                     "name": f"{self.prefix}tormentor *(Aliases: `tm`, `torm`, `t`)*",
                     "value": "Logs Tormentor's death and starts the respawn timer.\n**Example:** `{0}tormentor`".format(self.prefix)
+                },
+                {
+                    "name": f"{self.prefix}cancel-torm *(Aliases: `ct`, `tormentorcancel`)*",
+                    "value": "Cancels the Tormentor respawn timer.\n**Example:** `{0}cancel-torm`".format(self.prefix)
                 }
             ],
             "💬 **Mindful Messages**": [
@@ -87,6 +96,10 @@ class HelpCog(commands.Cog):
                 {
                     "name": f"{self.prefix}list-events *(Aliases: `ls`, `events`)*",
                     "value": "Lists all custom events.\n**Example:** `{0}list-events`".format(self.prefix)
+                },
+                {
+                    "name": f"{self.prefix}reset-events",
+                    "value": "Resets all events to their default values.\n**Example:** `{0}reset-events`".format(self.prefix)
                 }
             ],
             "ℹ️ **General**": [
@@ -105,6 +118,7 @@ class HelpCog(commands.Cog):
 
         await ctx.send(embed=embed)
         self.logger.info(f"Help message sent to {ctx.author}")
+
 
 async def setup(bot):
     """Function required for loading the Cog."""

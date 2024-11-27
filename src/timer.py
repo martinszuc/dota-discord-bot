@@ -22,6 +22,7 @@ class GameTimer:
         self.channel = None
         self.paused = False
         self.pause_event = asyncio.Event()
+        self.pause_event.set()
         self.announcement_manager = Announcement()
         self.events_manager = EventsManager()
 
@@ -34,6 +35,9 @@ class GameTimer:
         # Initialize event dictionaries
         self.static_events = {}
         self.periodic_events = {}
+
+        # Initialize the timer task
+        self.timer_task = self.timer_loop()
 
     async def start(self, channel, countdown):
         """Start the game timer with either a countdown or elapsed time."""
@@ -76,6 +80,7 @@ class GameTimer:
         else:
             logger.debug("Timer task is already running.")
 
+        # Start child timers
         await self.mindful_timer.start(channel)
         logger.debug("MindfulTimer started.")
 
@@ -104,21 +109,28 @@ class GameTimer:
         logger.info(f"GameTimer and all child timers resumed for guild ID {self.guild_id}.")
 
     @tasks.loop(seconds=1)
-    async def timer_task(self):
+    async def timer_loop(self):
         """Main timer loop that checks events every second."""
-        if self.paused:
-            logger.debug("GameTimer is paused. Waiting to unpause.")
-            await self.pause_event.wait()
-
-        self.time_elapsed += 1  # Advance the timer
-        logger.debug(f"Time elapsed: {self.time_elapsed} seconds")
-
         try:
-            # Check both static and periodic events
-            await self._check_static_events()
-            await self._check_periodic_events()
+            while True:
+                if self.paused:
+                    logger.debug("GameTimer is paused. Waiting to unpause.")
+                    await self.pause_event.wait()
+
+                await asyncio.sleep(1)
+                self.time_elapsed += 1  # Advance the timer
+                logger.debug(f"Time elapsed: {self.time_elapsed} seconds")
+
+                try:
+                    # Check both static and periodic events
+                    await self._check_static_events()
+                    await self._check_periodic_events()
+                except Exception as e:
+                    logger.error(f"Error in timer_loop: {e}", exc_info=True)
+        except asyncio.CancelledError:
+            logger.info(f"Timer loop for guild ID {self.guild_id} has been cancelled.")
         except Exception as e:
-            logger.error(f"Error in timer_task: {e}", exc_info=True)
+            logger.error(f"Unexpected error in timer_loop: {e}", exc_info=True)
 
     async def _check_static_events(self):
         """Check and trigger static events."""
@@ -146,7 +158,10 @@ class GameTimer:
         for timer in [self.roshan_timer, self.glyph_timer, self.tormentor_timer, self.mindful_timer]:
             if timer.is_running:
                 logger.debug(f"Stopping {timer.__class__.__name__} for guild ID {self.guild_id}.")
-                await timer.stop()
+                try:
+                    await timer.stop()
+                except Exception as e:
+                    logger.error(f"Error stopping {timer.__class__.__name__} for guild ID {self.guild_id}: {e}", exc_info=True)
 
     async def _pause_all_child_timers(self):
         """Helper method to pause all child timers."""
@@ -154,7 +169,10 @@ class GameTimer:
         for timer in [self.roshan_timer, self.glyph_timer, self.tormentor_timer, self.mindful_timer]:
             if timer.is_running and not timer.is_paused:
                 logger.debug(f"Pausing {timer.__class__.__name__} for guild ID {self.guild_id}.")
-                await timer.pause()
+                try:
+                    await timer.pause()
+                except Exception as e:
+                    logger.error(f"Error pausing {timer.__class__.__name__} for guild ID {self.guild_id}: {e}", exc_info=True)
 
     async def _resume_all_child_timers(self):
         """Helper method to resume all child timers."""
@@ -162,7 +180,10 @@ class GameTimer:
         for timer in [self.roshan_timer, self.glyph_timer, self.tormentor_timer, self.mindful_timer]:
             if timer.is_running and timer.is_paused:
                 logger.debug(f"Resuming {timer.__class__.__name__} for guild ID {self.guild_id}.")
-                await timer.resume()
+                try:
+                    await timer.resume()
+                except Exception as e:
+                    logger.error(f"Error resuming {timer.__class__.__name__} for guild ID {self.guild_id}: {e}", exc_info=True)
 
     def close(self):
         """Clean up resources."""
