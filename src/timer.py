@@ -22,7 +22,6 @@ class GameTimer:
         self.channel = None
         self.paused = False
         self.pause_event = asyncio.Event()
-        self.pause_event.set()
         self.announcement_manager = Announcement()
         self.events_manager = EventsManager()
 
@@ -36,8 +35,6 @@ class GameTimer:
         self.static_events = {}
         self.periodic_events = {}
 
-        # Initialize the timer task
-        self.timer_task = self.timer_loop()
 
     async def start(self, channel, countdown):
         """Start the game timer with either a countdown or elapsed time."""
@@ -109,7 +106,7 @@ class GameTimer:
         logger.info(f"GameTimer and all child timers resumed for guild ID {self.guild_id}.")
 
     @tasks.loop(seconds=1)
-    async def timer_loop(self):
+    async def timer_task(self):
         """Main timer loop that checks events every second."""
         try:
             while True:
