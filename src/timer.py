@@ -22,7 +22,6 @@ class GameTimer:
         self.channel = None
         self.paused = False
         self.pause_event = asyncio.Event()
-        self.pause_event.set()
         self.announcement_manager = Announcement()
         self.events_manager = EventsManager()
 
@@ -36,8 +35,6 @@ class GameTimer:
         self.static_events = {}
         self.periodic_events = {}
 
-        # Initialize the timer task
-        self.timer_task = self.timer_loop()
 
     async def start(self, channel, countdown):
         """Start the game timer with either a countdown or elapsed time."""
@@ -45,26 +42,31 @@ class GameTimer:
         self.paused = False
         self.pause_event.set()
 
-        # Check if countdown is in 'mm:ss' format or integer seconds
+        # Parse the countdown
+        self.is_delayed_start = False  # Flag to determine countdown type
+        self.target_time = 0  # Time to trigger event
+
         if isinstance(countdown, str):
             if countdown.startswith("-"):
-                # Remove the negative sign, convert to seconds, and set as positive elapsed time
-                self.time_elapsed = min_to_sec(countdown[1:])
-                logger.debug(f"Count down string detected as negative. Set time_elapsed to {self.time_elapsed} seconds.")
+                # Negative countdown: delayed start
+                seconds = min_to_sec(countdown[1:])
+                self.is_delayed_start = True
+                self.target_time = seconds
+                logger.debug(f"Delayed start detected. Will trigger after {self.target_time} seconds.")
             else:
-                # Countdown delay if positive mm:ss format
-                self.time_elapsed = -min_to_sec(countdown)
-                logger.debug(f"Count down string detected as positive. Set time_elapsed to {self.time_elapsed} seconds.")
+                # Positive countdown: regular start
+                self.is_delayed_start = False
+                self.target_time = min_to_sec(countdown)
+                logger.debug(f"Regular start detected. Countdown set to {self.target_time} seconds.")
         elif isinstance(countdown, int):
-            # Handle integer countdown directly
             if countdown < 0:
-                # Negative countdown: set as positive elapsed time
-                self.time_elapsed = abs(countdown)
-                logger.debug(f"Count down integer detected as negative. Set time_elapsed to {self.time_elapsed} seconds.")
+                self.is_delayed_start = True
+                self.target_time = abs(countdown)
+                logger.debug(f"Delayed start detected. Will trigger after {self.target_time} seconds.")
             else:
-                # Positive countdown: set as negative to use as delay
-                self.time_elapsed = -countdown
-                logger.debug(f"Count down integer detected as positive. Set time_elapsed to {self.time_elapsed} seconds.")
+                self.is_delayed_start = False
+                self.target_time = countdown
+                logger.debug(f"Regular start detected. Countdown set to {self.target_time} seconds.")
 
         logger.info(f"Game timer started with countdown={countdown} seconds in mode='{self.mode}'.")
 
@@ -73,7 +75,7 @@ class GameTimer:
         self.periodic_events = self.events_manager.get_periodic_events(self.guild_id, self.mode)
         logger.debug(f"Loaded static and periodic events for guild ID {self.guild_id} in mode '{self.mode}'.")
 
-        # Start the timer task
+        # Start the timer task if not already running
         if not self.timer_task.is_running():
             self.timer_task.start()
             logger.info("Timer task started.")
@@ -84,40 +86,25 @@ class GameTimer:
         await self.mindful_timer.start(channel)
         logger.debug("MindfulTimer started.")
 
-    async def stop(self):
-        """Stop the game timer and all child timers."""
-        logger.info(f"Stopping GameTimer for guild ID {self.guild_id}.")
-        self.timer_task.cancel()
-        self.paused = False
-        await self._stop_all_child_timers()
-        logger.info(f"GameTimer and all child timers stopped for guild ID {self.guild_id}.")
-
-    async def pause(self):
-        """Pause the game timer and all child timers."""
-        logger.info(f"Pausing GameTimer for guild ID {self.guild_id}.")
-        self.paused = True
-        self.pause_event.clear()
-        await self._pause_all_child_timers()
-        logger.info(f"GameTimer and all child timers paused for guild ID {self.guild_id}.")
-
-    async def unpause(self):
-        """Unpause the game timer and all child timers."""
-        logger.info(f"Unpausing GameTimer for guild ID {self.guild_id}.")
-        self.paused = False
-        self.pause_event.set()
-        await self._resume_all_child_timers()
-        logger.info(f"GameTimer and all child timers resumed for guild ID {self.guild_id}.")
-
     @tasks.loop(seconds=1)
-    async def timer_loop(self):
-        """Main timer loop that checks events every second."""
+    async def timer_task(self):
+        """Main timer loop, running every second."""
         try:
-            while True:
-                if self.paused:
-                    logger.debug("GameTimer is paused. Waiting to unpause.")
-                    await self.pause_event.wait()
+            if self.paused:
+                logger.debug("GameTimer is paused. Waiting to unpause.")
+                await self.pause_event.wait()
 
-                await asyncio.sleep(1)
+            if self.is_delayed_start:
+                self.target_time -= 1
+                if self.target_time <= 0:
+                    # Delayed start complete, initialize time_elapsed
+                    self.is_delayed_start = False
+                    self.time_elapsed = 0
+                    await self.channel.send("Delayed game start triggered.")
+                    logger.info(f"Delayed start triggered for guild ID {self.guild_id}.")
+                else:
+                    logger.debug(f"Delayed start countdown: {self.target_time} seconds remaining.")
+            else:
                 self.time_elapsed += 1  # Advance the timer
                 logger.debug(f"Time elapsed: {self.time_elapsed} seconds")
 
@@ -149,8 +136,31 @@ class GameTimer:
                     message = event['message']
                     logger.info(f"Triggering periodic event ID {event_id} for guild ID {self.guild_id}: '{message}' at {self.time_elapsed} seconds.")
                     await self.announcement_manager.announce(self, message)
-                    logger.info(
-                        f"Periodic event triggered: ID={event_id}, message='{message}', interval={event['interval']}")
+                    logger.info(f"Periodic event triggered: ID={event_id}, message='{message}', interval={event['interval']}")
+
+    async def stop(self):
+        """Stop the game timer and all child timers."""
+        logger.info(f"Stopping GameTimer for guild ID {self.guild_id}.")
+        self.timer_task.cancel()
+        self.paused = False
+        await self._stop_all_child_timers()
+        logger.info(f"GameTimer and all child timers stopped for guild ID {self.guild_id}.")
+
+    async def pause(self):
+        """Pause the game timer and all child timers."""
+        logger.info(f"Pausing GameTimer for guild ID {self.guild_id}.")
+        self.paused = True
+        self.pause_event.clear()
+        await self._pause_all_child_timers()
+        logger.info(f"GameTimer and all child timers paused for guild ID {self.guild_id}.")
+
+    async def unpause(self):
+        """Unpause the game timer and all child timers."""
+        logger.info(f"Unpausing GameTimer for guild ID {self.guild_id}.")
+        self.paused = False
+        self.pause_event.set()
+        await self._resume_all_child_timers()
+        logger.info(f"GameTimer and all child timers resumed for guild ID {self.guild_id}.")
 
     async def _stop_all_child_timers(self):
         """Helper method to stop all child timers."""
