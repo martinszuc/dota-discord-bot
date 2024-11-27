@@ -734,6 +734,7 @@ async def kill_all_game_timers(ctx):
                             logger.info(f"Disconnected from voice channel in guild '{guild.name}'.")
                         # Remove from game_timers
                         del game_timers[guild_id]
+                        logger.info(f"GameTimer removed for guild ID {guild_id}.")
                     except Exception as e:
                         logger.error(f"Error killing game timer for guild ID {guild_id}: {e}", exc_info=True)
     await ctx.send("All game timers have been stopped.")

@@ -109,21 +109,19 @@ class GameTimer:
     async def timer_task(self):
         """Main timer loop that checks events every second."""
         try:
-            while True:
-                if self.paused:
-                    logger.debug("GameTimer is paused. Waiting to unpause.")
-                    await self.pause_event.wait()
+            if self.paused:
+                logger.debug("GameTimer is paused. Waiting to unpause.")
+                await self.pause_event.wait()
 
-                await asyncio.sleep(1)
-                self.time_elapsed += 1  # Advance the timer
-                logger.debug(f"Time elapsed: {self.time_elapsed} seconds")
+            self.time_elapsed += 1  # Advance the timer
+            logger.debug(f"Time elapsed: {self.time_elapsed} seconds")
 
-                try:
-                    # Check both static and periodic events
-                    await self._check_static_events()
-                    await self._check_periodic_events()
-                except Exception as e:
-                    logger.error(f"Error in timer_loop: {e}", exc_info=True)
+            try:
+                # Check both static and periodic events
+                await self._check_static_events()
+                await self._check_periodic_events()
+            except Exception as e:
+                logger.error(f"Error in timer_loop: {e}", exc_info=True)
         except asyncio.CancelledError:
             logger.info(f"Timer loop for guild ID {self.guild_id} has been cancelled.")
         except Exception as e:
