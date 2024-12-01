@@ -7,8 +7,9 @@ The **Dota Timer Bot** is a Discord bot designed to provide precise timers and n
 ### 📥 Add the Bot to Your Server:
 Click [here](https://discord.com/oauth2/authorize?client_id=1302304488232583239&permissions=35191388204112&integration_type=0&scope=bot) to invite the bot to your Discord server. 
 
-**For commands use text channel `timer-bot` and voice channel `DOTA` whichi you should create on your server**
-![image](https://github.com/user-attachments/assets/856f92b8-e669-4e8e-a5ba-810e704d5972)
+**For commands use text channel `timer-bot` and voice channel `DOTA` which you should create on your server**
+
+- ![image](https://github.com/user-attachments/assets/856f92b8-e669-4e8e-a5ba-810e704d5972)
 
 ### 🔧 Setting Up Hotkeys:
 For an optimal experience, configure your Dota 2 hotkeys as described in [HOTKEYS_SETUP.md](HOTKEYS_SETUP.md).
