@@ -24,7 +24,7 @@ class BaseTimer:
             self.task = asyncio.create_task(self._run_timer(channel))
             logger.info(f"{self.__class__.__name__} started for guild ID {self.game_timer.guild_id}.")
         else:
-            logger.warning(f"{self.__class__.__name__} is already running for guild ID {self.game_timer.guild_id}.")
+            logger.warning(f"{self.__class__.__name__} is already running.")
 
     async def _run_timer(self, channel):
         """Internal method for timer countdown logic."""
@@ -49,6 +49,7 @@ class BaseTimer:
         if self.is_running:
             self.is_running = False
             self.is_paused = False
+            self.pause_event.set()  # Unblock any paused operations
             if self.task:
                 self.task.cancel()
                 try:
