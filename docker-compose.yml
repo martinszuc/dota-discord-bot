@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  dota-discord-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - WEBHOOK_ID=${WEBHOOK_ID}
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./audio:/app/audio
+    restart: always
