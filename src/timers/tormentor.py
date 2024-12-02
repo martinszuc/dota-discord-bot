@@ -28,7 +28,7 @@ class TormentorTimer(BaseTimer):
             logger.info(f"Tormentor timer started for guild ID {self.game_timer.guild_id}.")
 
             # Announce 3-minute warning
-            await asyncio.sleep(respawn_duration - 180)
+            await self.sleep_with_pause(respawn_duration - 180)
             if not self.is_running:
                 logger.info(f"TormentorTimer stopped before 3-minute warning for guild ID {self.game_timer.guild_id}.")
                 return
@@ -36,7 +36,7 @@ class TormentorTimer(BaseTimer):
             logger.info(f"3-minute warning for Tormentor timer in guild ID {self.game_timer.guild_id}.")
 
             # Announce 1-minute warning
-            await asyncio.sleep(120)
+            await self.sleep_with_pause(120)
             if not self.is_running:
                 logger.info(f"TormentorTimer stopped before 1-minute warning for guild ID {self.game_timer.guild_id}.")
                 return
@@ -44,7 +44,7 @@ class TormentorTimer(BaseTimer):
             logger.info(f"1-minute warning for Tormentor timer in guild ID {self.game_timer.guild_id}.")
 
             # Final announcement
-            await asyncio.sleep(60)
+            await self.sleep_with_pause(60)
             if not self.is_running:
                 logger.info(f"TormentorTimer stopped before final respawn announcement for guild ID {self.game_timer.guild_id}.")
                 return

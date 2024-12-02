@@ -9,7 +9,6 @@ from src.timers.base import BaseTimer
 from src.utils.config import logger, MINDFUL_AUDIO_DIR
 from src.event_definitions import mindful_messages, mindful_pre_messages
 
-
 class MindfulTimer(BaseTimer):
     """Manages periodic mindful message announcements, with text and optional audio selection."""
 
@@ -51,7 +50,7 @@ class MindfulTimer(BaseTimer):
         logger.info(f"Sent mindful TTS message in guild ID {self.game_timer.guild_id}: '{message}'")
 
         # Short delay before playing audio
-        await asyncio.sleep(2)
+        await self.sleep_with_pause(2)
 
         # Play a random audio file
         audio_file = random.choice(self.audio_files)
@@ -59,9 +58,9 @@ class MindfulTimer(BaseTimer):
         self.game_timer.voice_client.play(audio_source)
         logger.info(f"Playing mindful audio in guild ID {self.game_timer.guild_id}: {audio_file}")
 
-        # Wait for audio to finish playing
+        # Wait for audio to finish playing, checking for pause
         while self.game_timer.voice_client.is_playing():
-            await asyncio.sleep(0.1)
+            await self.sleep_with_pause(0.1)
 
     async def _run_timer(self, channel):
         """Send a random mindful message or audio with TTS intro at random intervals while enabled."""
@@ -75,7 +74,7 @@ class MindfulTimer(BaseTimer):
             # Initial delay before the first message (10 to 15 minutes)
             initial_delay = random.randint(self.min_interval, self.max_interval)
             logger.debug(f"Mindful: Initial delay set to {initial_delay} seconds.")
-            await asyncio.sleep(initial_delay)
+            await self.sleep_with_pause(initial_delay)
 
             while self.is_running:
                 # Randomly choose between a text or audio message
@@ -89,7 +88,7 @@ class MindfulTimer(BaseTimer):
                 # Set a random interval between min_interval and max_interval for the next message
                 next_interval = random.randint(self.min_interval, self.max_interval)
                 logger.debug(f"Waiting {next_interval} seconds until the next mindful message.")
-                await asyncio.sleep(next_interval)
+                await self.sleep_with_pause(next_interval)
 
         except asyncio.CancelledError:
             logger.info(f"MindfulTimer task cancelled for guild ID {self.game_timer.guild_id}.")

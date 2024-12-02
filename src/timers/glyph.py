@@ -28,7 +28,7 @@ class GlyphTimer(BaseTimer):
             logger.info(f"Glyph cooldown started in guild ID {self.game_timer.guild_id}.")
 
             # Announce 1-minute warning
-            await asyncio.sleep(cooldown_duration - 60)
+            await self.sleep_with_pause(cooldown_duration - 60)
             if not self.is_running:
                 logger.info(f"GlyphTimer stopped before 1-minute warning for guild ID {self.game_timer.guild_id}.")
                 return
@@ -36,7 +36,7 @@ class GlyphTimer(BaseTimer):
             logger.info(f"1-minute warning for Glyph cooldown in guild ID {self.game_timer.guild_id}.")
 
             # Final announcement
-            await asyncio.sleep(60)
+            await self.sleep_with_pause(60)
             if not self.is_running:
                 logger.info(f"GlyphTimer stopped before final availability announcement for guild ID {self.game_timer.guild_id}.")
                 return

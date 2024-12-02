@@ -1,7 +1,6 @@
 # src/timers/base.py
 
 import asyncio
-
 from src.utils.config import logger
 
 class BaseTimer:
@@ -58,3 +57,14 @@ class BaseTimer:
                     logger.info(f"{self.__class__.__name__} task was cancelled for guild ID {self.game_timer.guild_id}.")
                 self.task = None
             logger.info(f"{self.__class__.__name__} stopped for guild ID {self.game_timer.guild_id}.")
+
+    async def sleep_with_pause(self, duration):
+        """Sleep for the specified duration, respecting pause."""
+        try:
+            while duration > 0 and self.is_running:
+                await self.pause_event.wait()
+                sleep_duration = min(1, duration)
+                await asyncio.sleep(sleep_duration)
+                duration -= sleep_duration
+        except asyncio.CancelledError:
+            pass

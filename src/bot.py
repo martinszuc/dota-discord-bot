@@ -104,7 +104,7 @@ async def on_guild_join(guild):
     channel = guild.system_channel or next(
         (chan for chan in guild.text_channels if chan.permissions_for(guild.me).send_messages), None)
     if channel:
-        await channel.send(f"Dota Timer Bot has been added to this server! Type `{PREFIX}bot-help` to get started.")
+        await channel.send(f"Dota Timer Bot has been added to this server! Type {PREFIX}bot-help to get started.")
         logger.info(f"Sent welcome message to channel '{channel.name}' in guild '{guild.name}'.")
 
 
@@ -117,7 +117,7 @@ async def on_command_error(ctx, error):
         await ctx.send("One or more arguments are invalid.")
         logger.warning(f"Bad arguments in command '{ctx.command}'. Context: {ctx.message.content}")
     elif isinstance(error, commands.CommandNotFound):
-        await ctx.send(f"Command not found. Type `{PREFIX}bot-help` for a list of available commands.")
+        await ctx.send(f"Command not found. Type {PREFIX}bot-help for a list of available commands.")
         logger.warning(f"Command not found. Context: {ctx.message.content}")
     elif isinstance(error, commands.CheckFailure):
         await ctx.send("You do not have permission to use this command.")
@@ -141,7 +141,7 @@ async def load_cogs():
     # Get only the relative path part for importing
     for filename in os.listdir(COGS_DIRECTORY):
         if filename.endswith('.py') and not filename.startswith('__'):
-            # Build the import path using a relative path from `src.cogs`
+            # Build the import path using a relative path from src.cogs
             extension = f"src.cogs.{filename[:-3]}"
             try:
                 await bot.load_extension(extension)
@@ -542,7 +542,7 @@ async def add_event_command(ctx, event_type: str, *args):
         if event_type.lower() == 'static':
             if len(args) < 2:
                 await ctx.send(
-                    "Insufficient arguments for static event. Usage: `!add-event static <MM:SS> <message>`")
+                    "Insufficient arguments for static event. Usage: !add-event static <MM:SS> <message>")
                 logger.warning(f"Insufficient arguments for static event by '{ctx.author}'.")
                 return
             time_str = args[0]
@@ -555,7 +555,7 @@ async def add_event_command(ctx, event_type: str, *args):
         elif event_type.lower() == 'periodic':
             if len(args) < 4:
                 await ctx.send(
-                    "Insufficient arguments for periodic event. Usage: `!add-event periodic <MM:SS> <MM:SS> <MM:SS> <message>`")
+                    "Insufficient arguments for periodic event. Usage: !add-event periodic <MM:SS> <MM:SS> <MM:SS> <message>")
                 logger.warning(f"Insufficient arguments for periodic event by '{ctx.author}'.")
                 return
             start_time_str = args[0]
@@ -594,7 +594,7 @@ async def remove_event_command(ctx, event_id: int):
             logger.info(f"Event ID {event_id} removed by '{ctx.author}' for guild ID {guild_id}.")
         else:
             await ctx.send(f"No event found with ID {event_id}.")
-            logger.warning(f"Event ID {event_id} not found for removal by '{ctx.author}' in guild ID {guild_id}.")
+            logger.warning(f"Event ID {event_id} not found for guild ID {guild_id}.")
     except Exception as e:
         await ctx.send(f"Error removing event: {e}")
         logger.error(f"Error removing event ID {event_id} by '{ctx.author}' for guild ID {guild_id}: {e}",

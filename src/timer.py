@@ -11,7 +11,6 @@ from src.timers.tormentor import TormentorTimer
 from src.timers.mindful import MindfulTimer
 from src.utils.utils import min_to_sec
 
-
 class GameTimer:
     """Class to manage the game timer and events."""
 
@@ -34,7 +33,6 @@ class GameTimer:
         # Initialize event dictionaries
         self.static_events = {}
         self.periodic_events = {}
-
 
     async def start(self, channel, countdown):
         """Start the game timer with either a countdown or elapsed time."""
