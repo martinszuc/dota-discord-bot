@@ -4,6 +4,7 @@ FROM python:3.10-slim
 # Set environment variables
 ENV DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
 ENV WEBHOOK_ID=${WEBHOOK_ID}
+ENV PYTHONPATH=/app
 
 # Set the working directory
 WORKDIR /app
