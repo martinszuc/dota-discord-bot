@@ -1,5 +1,5 @@
 # Use Python image with the correct version
-FROM python:3.10-slim
+FROM python:3.12-slim
 
 # Set environment variables
 ENV DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
