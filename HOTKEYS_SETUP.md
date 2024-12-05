@@ -7,6 +7,17 @@
 - **xbindkeys and xdotool**: For hotkey setup on Linux/macOS.
 - **AutoHotkey**: For hotkey setup on Windows.
 
+My hotkeys setup:
+    +---+
+    | / |     /: Start Turbo (30 Sec Countdown)
++---+---+---+
+| 7 | 8 | 9 | 7: Cancel RS Dead (RS Alive Again), 8: Cancel Enemy Glyph, 9: Stop Game
++---+---+---+
+| 4 | 5 | 6 | 4: Start 01:20, 5: Pause, 6: Unpause
++---+---+---+
+| 1 | 2 | 3 | 1: RS Killed, 2: Enemy Glyph, 3: Tormentor Killed
++---+---+---+
+
 ---
 
 ## Step 1: Create Scripts for Commands
@@ -49,35 +60,64 @@ if __name__ == "__main__":
 ```
 
 ### Other Command Scripts
-#### command_rosh.sh
+#### `command_rs.sh`
 ```bash
 #!/bin/bash
-python3 ~/dota2_bot/scripts/send_discord_message.py '!rosh'
+python3 ~/dota2_bot/scripts/send_discord_message.py '!rs'
 ```
-#### command_glyph.sh
+
+#### `command_glyph.sh`
 ```bash
 #!/bin/bash
-python3 ~/dota2_bot/scripts/send_discord_message.py '!glyph'
+python3 ~/dota2_bot/scripts/send_discord_message.py '!g'
 ```
-#### command_tormentor.sh
+
+#### `command_tormentor.sh`
 ```bash
 #!/bin/bash
-python3 ~/dota2_bot/scripts/send_discord_message.py '!tormentor'
+python3 ~/dota2_bot/scripts/send_discord_message.py '!t'
 ```
-#### command_start.sh
+
+#### `command_start.sh`
 ```bash
 #!/bin/bash
-python3 ~/dota2_bot/scripts/send_discord_message.py '!start 30'
+python3 ~/dota2_bot/scripts/send_discord_message.py '!start 01:20'
 ```
-#### command_pause.sh
+
+#### `command_pause.sh`
 ```bash
 #!/bin/bash
 python3 ~/dota2_bot/scripts/send_discord_message.py '!pause'
 ```
-#### command_unpause.sh
+
+#### `command_unpause.sh`
 ```bash
 #!/bin/bash
 python3 ~/dota2_bot/scripts/send_discord_message.py '!unpause'
+```
+
+#### `command_cancel_rs_alive.sh`
+```bash
+#!/bin/bash
+python3 ~/dota2_bot/scripts/send_discord_message.py '!rsb'
+```
+
+#### `command_cancel_enemy_glyph.sh`
+```bash
+#!/bin/bash
+python3 ~/dota2_bot/scripts/send_discord_message.py '!cg'
+```
+
+#### `command_stop_game.sh`
+```bash
+#!/bin/bash
+python3 ~/dota2_bot/scripts/send_discord_message.py '!stop'
+```
+
+#### `command_start_turbo.sh`
+```bash
+#!/bin/bash
+python3 ~/dota2_bot/scripts/send_discord_message.py '!start 30 turbo'
 ```
 
 Make all scripts executable:
@@ -102,9 +142,9 @@ chmod +x ~/dota2_bot/scripts/*.sh
    nano ~/.xbindkeysrc
    ```
 
-   Add the following:
+    Add the following:
    ```
-   "/home/your_username/dota2_bot/scripts/command_rosh.sh"
+   "/home/your_username/dota2_bot/scripts/command_rs.sh"
        KP_End
 
    "/home/your_username/dota2_bot/scripts/command_glyph.sh"
@@ -121,6 +161,18 @@ chmod +x ~/dota2_bot/scripts/*.sh
 
    "/home/your_username/dota2_bot/scripts/command_unpause.sh"
        KP_Right
+
+   "/home/your_username/dota2_bot/scripts/command_cancel_rs_alive.sh"
+       KP_Home
+
+   "/home/your_username/dota2_bot/scripts/command_cancel_enemy_glyph.sh"
+       KP_Up
+
+   "/home/your_username/dota2_bot/scripts/command_stop_game.sh"
+       KP_Prior
+
+   "/home/your_username/dota2_bot/scripts/command_start_turbo.sh"
+       KP_Divide
    ```
 
 3. Start xbindkeys:
@@ -154,12 +206,17 @@ Test hotkeys by pressing the assigned keys. Check Discord for sent messages.
 
 2. Create a script with this content:
    ```ahk
-   Numpad1::Run, pythonw.exe "C:\dota2_bot\scripts\send_discord_message.py" "!rosh"
-   Numpad2::Run, pythonw.exe "C:\dota2_bot\scripts\send_discord_message.py" "!glyph"
-   Numpad3::Run, pythonw.exe "C:\dota2_bot\scripts\send_discord_message.py" "!tormentor"
-   Numpad4::Run, pythonw.exe "C:\dota2_bot\scripts\send_discord_message.py" "!start 30"
-   Numpad5::Run, pythonw.exe "C:\dota2_bot\scripts\send_discord_message.py" "!pause"
-   Numpad6::Run, pythonw.exe "C:\dota2_bot\scripts\send_discord_message.py" "!unpause"
+    Numpad1::Run, pythonw.exe "C:\dota2_bot\scripts\send_discord_message.py" "!rs"
+    Numpad2::Run, pythonw.exe "C:\dota2_bot\scripts\send_discord_message.py" "!g
+    Numpad3::Run, pythonw.exe "C:\dota2_bot\scripts\send_discord_message.py" "!t"
+    Numpad4::Run, pythonw.exe "C:\dota2_bot\scripts\send_discord_message.py" "!start 01:20"
+    Numpad5::Run, pythonw.exe "C:\dota2_bot\scripts\send_discord_message.py" "!pause"
+    Numpad6::Run, pythonw.exe "C:\dota2_bot\scripts\send_discord_message.py" "!unpause"
+    Numpad7::Run, pythonw.exe "C:\dota2_bot\scripts\send_discord_message.py" "!rsb"
+    Numpad8::Run, pythonw.exe "C:\dota2_bot\scripts\send_discord_message.py" "!cg"
+    Numpad9::Run, pythonw.exe "C:\dota2_bot\scripts\send_discord_message.py" "!stop"
+    NumpadDiv::Run, pythonw.exe "C:\dota2_bot\scripts\send_discord_message.py" "!start 30 turbo"
+
    ```
 
 3. Save and run the script. Test hotkeys to ensure functionality.
