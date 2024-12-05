@@ -12,4 +12,5 @@ services:
       - ./logs:/app/logs
       - ./data:/app/data
       - ./audio:/app/audio
+      - ./tts_cache:/app/tts_cache
     restart: always
