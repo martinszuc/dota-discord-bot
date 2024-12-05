@@ -9,9 +9,17 @@ ENV PYTHONPATH=/app
 # Set the working directory
 WORKDIR /app
 
-# Copy requirements file and install dependencies
+# Copy requirements file
 COPY pip_requirements.txt requirements.txt
+
+# Install a compatible version of setuptools
+RUN pip install --no-cache-dir 'setuptools<58.0.0'
+
+# Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Install FFmpeg (if not already installed)
+RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
 
 # Copy the entire bot code into the container
 COPY . /app
