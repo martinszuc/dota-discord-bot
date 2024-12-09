@@ -1,58 +1,42 @@
 # src/timers/tormentor.py
 
-import asyncio
-from src.communication.announcement import Announcement
 from src.timers.base import BaseTimer
+from src.utils.utils import min_to_sec
 from src.utils.config import logger
 
 class TormentorTimer(BaseTimer):
-    """Class to handle the Tormentor respawn timer."""
+    """Handles the Tormentor respawn timer."""
 
-    def __init__(self, game_timer):
-        super().__init__(game_timer)
-        self.announcement = Announcement()
-        logger.debug(f"TormentorTimer initialized for guild ID {self.game_timer.guild_id}.")
+    def setup(self):
+        """Set up the Tormentor respawn schedule based on game mode."""
+        self.is_running = True
+        mode = self.game_timer.mode
+        current_time = self.game_timer.time_elapsed
 
-    async def _run_timer(self, channel):
-        try:
-            logger.info(f"TormentorTimer running for guild ID {self.game_timer.guild_id}.")
-            # Set respawn duration based on game mode
-            if self.game_timer.mode == 'regular':
-                respawn_duration = 10 * 60  # 10 minutes for regular
-                logger.debug(f"Regular mode: Tormentor respawn in {respawn_duration} seconds.")
-            else:
-                respawn_duration = 5 * 60  # 5 minutes for turbo
-                logger.debug(f"Turbo mode: Tormentor respawn in {respawn_duration} seconds.")
+        if mode == 'regular':
+            respawn_duration = 10 * 60  # 10 minutes for regular
+        else:
+            respawn_duration = 5 * 60  # 5 minutes for turbo
 
-            await self.announcement.announce(self.game_timer, "Tormentor timer started.")
-            logger.info(f"Tormentor timer started for guild ID {self.game_timer.guild_id}.")
+        # Schedule announcements relative to current_time
+        self.next_announcements = [
+            (current_time + respawn_duration - 180, "Tormentor will respawn in 3 minutes!"),
+            (current_time + respawn_duration - 60, "Tormentor will respawn in 1 minute!"),
+            (current_time + respawn_duration, "Tormentor has respawned!")
+        ]
+        logger.info(f"TormentorTimer set up for guild ID {self.game_timer.guild_id} with respawn in {respawn_duration} seconds.")
 
-            # Announce 3-minute warning
-            await self.sleep_with_pause(respawn_duration - 180)
-            if not self.is_running:
-                logger.info(f"TormentorTimer stopped before 3-minute warning for guild ID {self.game_timer.guild_id}.")
-                return
-            await self.announcement.announce(self.game_timer, "Tormentor will respawn in 3 minutes!")
-            logger.info(f"3-minute warning for Tormentor timer in guild ID {self.game_timer.guild_id}.")
+    async def check_and_announce(self):
+        if not self.is_running or not self.game_timer.is_running():
+            return
 
-            # Announce 1-minute warning
-            await self.sleep_with_pause(120)
-            if not self.is_running:
-                logger.info(f"TormentorTimer stopped before 1-minute warning for guild ID {self.game_timer.guild_id}.")
-                return
-            await self.announcement.announce(self.game_timer, "Tormentor will respawn in 1 minute!")
-            logger.info(f"1-minute warning for Tormentor timer in guild ID {self.game_timer.guild_id}.")
+        current_time = self.game_timer.time_elapsed
+        due = [a for a in self.next_announcements if a[0] == current_time]
+        for _, msg in due:
+            await self.announcement.announce(self.game_timer, msg)
+            logger.info(f"TormentorTimer announcement: '{msg}'")
+            self.next_announcements.remove((_, msg))
 
-            # Final announcement
-            await self.sleep_with_pause(60)
-            if not self.is_running:
-                logger.info(f"TormentorTimer stopped before final respawn announcement for guild ID {self.game_timer.guild_id}.")
-                return
-            await self.announcement.announce(self.game_timer, "Tormentor has respawned!")
-            logger.info(f"Tormentor has respawned in guild ID {self.game_timer.guild_id}.")
-
-        except asyncio.CancelledError:
-            logger.info(f"TormentorTimer task cancelled for guild ID {self.game_timer.guild_id}.")
-        finally:
-            self.is_running = False
-            logger.debug(f"TormentorTimer concluded for guild ID {self.game_timer.guild_id}.")
+        # If all announcements are done, reset the timer
+        if not self.next_announcements:
+            self.reset()

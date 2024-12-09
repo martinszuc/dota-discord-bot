@@ -1,71 +1,29 @@
 # src/timers/base.py
 
-import asyncio
+import logging
+
 from src.utils.config import logger
 
 class BaseTimer:
-    """Base class for Dota timers with pause, resume, and stop functionality."""
+    """Base class for child timers with setup, reset, and announce methods."""
 
     def __init__(self, game_timer):
         self.game_timer = game_timer
         self.is_running = False
-        self.is_paused = False
-        self.task = None
-        self.pause_event = asyncio.Event()
-        self.pause_event.set()  # Initially not paused
+        self.next_announcements = []
+        self.announcement = self.game_timer.announcement_manager
         logger.debug(f"{self.__class__.__name__} initialized for guild ID {self.game_timer.guild_id}.")
 
-    async def start(self, channel):
-        """Start the timer task asynchronously."""
-        if not self.is_running:
-            self.is_running = True
-            self.is_paused = False
-            self.pause_event.set()
-            self.task = asyncio.create_task(self._run_timer(channel))
-            logger.info(f"{self.__class__.__name__} started for guild ID {self.game_timer.guild_id}.")
-        else:
-            logger.warning(f"{self.__class__.__name__} is already running.")
+    def setup(self):
+        """Set up the timer based on the game mode and current time."""
+        raise NotImplementedError("This method should be implemented by subclasses.")
 
-    async def _run_timer(self, channel):
-        """Internal method for timer countdown logic."""
-        raise NotImplementedError("This method should be implemented by subclasses")
+    def reset(self):
+        """Reset the timer."""
+        self.is_running = False
+        self.next_announcements = []
+        logger.info(f"{self.__class__.__name__} reset for guild ID {self.game_timer.guild_id}.")
 
-    async def pause(self):
-        """Pause the timer."""
-        if self.is_running and not self.is_paused:
-            self.is_paused = True
-            self.pause_event.clear()
-            logger.info(f"{self.__class__.__name__} paused for guild ID {self.game_timer.guild_id}.")
-
-    async def resume(self):
-        """Resume the timer if it is paused."""
-        if self.is_running and self.is_paused:
-            self.is_paused = False
-            self.pause_event.set()
-            logger.info(f"{self.__class__.__name__} resumed for guild ID {self.game_timer.guild_id}.")
-
-    async def stop(self):
-        """Stop the timer and cancel the task if running."""
-        if self.is_running:
-            self.is_running = False
-            self.is_paused = False
-            self.pause_event.set()  # Unblock any paused operations
-            if self.task:
-                self.task.cancel()
-                try:
-                    await self.task
-                except asyncio.CancelledError:
-                    logger.info(f"{self.__class__.__name__} task was cancelled for guild ID {self.game_timer.guild_id}.")
-                self.task = None
-            logger.info(f"{self.__class__.__name__} stopped for guild ID {self.game_timer.guild_id}.")
-
-    async def sleep_with_pause(self, duration):
-        """Sleep for the specified duration, respecting pause."""
-        try:
-            while duration > 0 and self.is_running:
-                await self.pause_event.wait()
-                sleep_duration = min(1, duration)
-                await asyncio.sleep(sleep_duration)
-                duration -= sleep_duration
-        except asyncio.CancelledError:
-            pass
+    async def check_and_announce(self):
+        """Check if any announcements need to be made based on time_elapsed."""
+        raise NotImplementedError("This method should be implemented by subclasses.")
