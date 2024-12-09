@@ -171,8 +171,14 @@ async def on_voice_state_update(member, before, after):
         dota_voice_channel = discord.utils.get(guild.voice_channels, name=VOICE_CHANNEL_NAME)
         if dota_voice_channel:
             try:
-                await dota_voice_channel.connect()
+                # Connect and get the new voice client object
+                new_voice_client = await dota_voice_channel.connect()
                 logger.info(f"Reconnected to voice channel '{dota_voice_channel.name}' in guild '{guild.name}'.")
+
+                # Update the game_timer's voice_client reference to the new one
+                if guild_id in game_timers:
+                    game_timers[guild_id].voice_client = new_voice_client
+                    logger.debug("Updated game_timer.voice_client reference after reconnect.")
             except Exception as e:
                 logger.error(
                     f"Failed to reconnect to voice channel '{dota_voice_channel.name}' in guild '{guild.name}': {e}",
