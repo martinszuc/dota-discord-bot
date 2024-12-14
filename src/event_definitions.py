@@ -56,7 +56,7 @@ turbo_periodic_events = [
     {"mode": "turbo", "start_time": min_to_sec("06:00"), "interval": min_to_sec("07:00"), "end_time": min_to_sec("99:00"), "message": "XP Runes in 60 seconds!"},
     {"mode": "turbo", "start_time": min_to_sec("06:30"), "interval": min_to_sec("07:00"), "end_time": min_to_sec("99:00"), "message": "XP Runes in 30 seconds!"},
 # Tormentor
-    {"mode": "turbo", "start_time": min_to_sec("10:00"), "interval": min_to_sec("05:00"), "end_time": min_to_sec("99:00"), "message": "Tormentor in 60 seconds!"},
+    {"mode": "turbo", "start_time": min_to_sec("10:00"), "interval": min_to_sec("05:00"), "end_time": min_to_sec("10:10"), "message": "Tormentor in 60 seconds!"},
 # Creeps
     {"mode": "turbo", "start_time": min_to_sec("05:00"), "interval": min_to_sec("05:00"), "end_time": min_to_sec("50:00"), "message": "Siege Creep in 30 seconds!"},
 # Lotus
