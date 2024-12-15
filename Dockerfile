@@ -1,5 +1,5 @@
-# Use Python image with the correct version
-FROM python:3.12-slim
+# Use Python 3.9.13 as the base image
+FROM python:3.9.13-slim
 
 # Set environment variables
 ENV DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
