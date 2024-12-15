@@ -9,7 +9,7 @@ from src.timers.glyph import GlyphTimer
 from src.timers.roshan import RoshanTimer
 from src.timers.tormentor import TormentorTimer
 from src.timers.mindful import MindfulTimer
-from src.utils.utils import min_to_sec
+from src.utils.utils import min_to_sec, parse_initial_countdown  # <--- import the new function
 
 class GameTimer:
     """Class to manage the game timer and events."""
@@ -24,60 +24,39 @@ class GameTimer:
         self.announcement_manager = Announcement()
         self.events_manager = EventsManager()
 
-        # Initialize child timers
+        # Instantiate child timers (but do NOT auto-start them, except mindful)
         self.roshan_timer = RoshanTimer(self)
         self.glyph_timer = GlyphTimer(self)
         self.tormentor_timer = TormentorTimer(self)
         self.mindful_timer = MindfulTimer(self)
 
-        # Initialize event dictionaries
         self.static_events = {}
         self.periodic_events = {}
 
     async def start(self, channel, countdown):
-        """Start the game timer with either a countdown or elapsed time."""
+        """Start the game timer with either a countdown or already elapsed time."""
         self.channel = channel
         self.paused = False
         self.pause_event.set()
 
-        # Check if countdown is in 'mm:ss' format or integer seconds
-        if isinstance(countdown, str):
-            if countdown.startswith("-"):
-                # Remove the negative sign, convert to seconds, and set as positive elapsed time
-                self.time_elapsed = min_to_sec(countdown[1:])
-                logger.debug(f"Count down string detected as negative. Set time_elapsed to {self.time_elapsed} seconds.")
-            else:
-                # Countdown delay if positive mm:ss format
-                self.time_elapsed = -min_to_sec(countdown)
-                logger.debug(f"Count down string detected as positive. Set time_elapsed to {self.time_elapsed} seconds.")
-        elif isinstance(countdown, int):
-            # Handle integer countdown directly
-            if countdown < 0:
-                # Negative countdown: set as positive elapsed time
-                self.time_elapsed = abs(countdown)
-                logger.debug(f"Count down integer detected as negative. Set time_elapsed to {self.time_elapsed} seconds.")
-            else:
-                # Positive countdown: set as negative to use as delay
-                self.time_elapsed = -countdown
-                logger.debug(f"Count down integer detected as positive. Set time_elapsed to {self.time_elapsed} seconds.")
+        self.time_elapsed = parse_initial_countdown(countdown)
+        logger.info(f"Game timer parsed countdown '{countdown}' -> time_elapsed={self.time_elapsed} (seconds).")
 
-        logger.info(f"Game timer started with countdown={countdown} seconds in mode='{self.mode}'.")
-
-        # Load events for the guild and mode
+        # Load event definitions for the guild and mode
         self.static_events = self.events_manager.get_static_events(self.guild_id, self.mode)
         self.periodic_events = self.events_manager.get_periodic_events(self.guild_id, self.mode)
-        logger.debug(f"Loaded static and periodic events for guild ID {self.guild_id} in mode '{self.mode}'.")
+        logger.debug(f"Loaded static/periodic events for guild ID {self.guild_id} in mode '{self.mode}'.")
 
-        # Start the timer task
+        # Start the main timer loop
         if not self.timer_task.is_running():
             self.timer_task.start()
-            logger.info("Timer task started.")
+            logger.info("GameTimer main loop started.")
         else:
-            logger.debug("Timer task is already running.")
+            logger.debug("GameTimer main loop is already running, skipping restart.")
 
-        # Start child timers
+        # Start only the mindful timer automatically
         await self.mindful_timer.start(channel)
-        logger.debug("MindfulTimer started.")
+        logger.debug("MindfulTimer started automatically upon game start.")
 
     async def stop(self):
         """Stop the game timer and all child timers."""
@@ -105,25 +84,22 @@ class GameTimer:
 
     @tasks.loop(seconds=1)
     async def timer_task(self):
-        """Main timer loop that checks events every second."""
+        """Main timer loop checks events every second."""
         try:
             if self.paused:
-                logger.debug("GameTimer is paused. Waiting to unpause.")
                 await self.pause_event.wait()
 
-            self.time_elapsed += 1  # Advance the timer
-            logger.debug(f"Time elapsed: {self.time_elapsed} seconds")
+            self.time_elapsed += 1  # Advance the timer by 1 second
+            logger.debug(f"Time elapsed: {self.time_elapsed} seconds (guild_id={self.guild_id})")
 
-            try:
-                # Check both static and periodic events
-                await self._check_static_events()
-                await self._check_periodic_events()
-            except Exception as e:
-                logger.error(f"Error in timer_loop: {e}", exc_info=True)
+            # Check both static and periodic events
+            await self._check_static_events()
+            await self._check_periodic_events()
+
         except asyncio.CancelledError:
-            logger.info(f"Timer loop for guild ID {self.guild_id} has been cancelled.")
+            logger.info(f"GameTimer loop cancelled for guild ID {self.guild_id}.")
         except Exception as e:
-            logger.error(f"Unexpected error in timer_loop: {e}", exc_info=True)
+            logger.error(f"Unexpected error in GameTimer loop for guild ID {self.guild_id}: {e}", exc_info=True)
 
     async def _check_static_events(self):
         """Check and trigger static events."""
@@ -146,47 +122,25 @@ class GameTimer:
                         f"Periodic event triggered: ID={event_id}, message='{message}', interval={event['interval']}")
 
     async def _stop_all_child_timers(self):
-        """Helper method to stop all child timers."""
-        logger.debug(f"Stopping all child timers for guild ID {self.guild_id}.")
+        """Stop roshan, glyph, tormentor, mindful timers."""
         for timer in [self.roshan_timer, self.glyph_timer, self.tormentor_timer, self.mindful_timer]:
             if timer.is_running:
-                logger.debug(f"Stopping {timer.__class__.__name__} for guild ID {self.guild_id}.")
-                try:
-                    await timer.stop()
-                except Exception as e:
-                    logger.error(f"Error stopping {timer.__class__.__name__} for guild ID {self.guild_id}: {e}", exc_info=True)
+                await timer.stop()
 
     async def _pause_all_child_timers(self):
-        """Helper method to pause all child timers."""
-        logger.debug(f"Pausing all child timers for guild ID {self.guild_id}.")
+        """Pause roshan, glyph, tormentor, mindful timers."""
         for timer in [self.roshan_timer, self.glyph_timer, self.tormentor_timer, self.mindful_timer]:
             if timer.is_running and not timer.is_paused:
-                logger.debug(f"Pausing {timer.__class__.__name__} for guild ID {self.guild_id}.")
-                try:
-                    await timer.pause()
-                except Exception as e:
-                    logger.error(f"Error pausing {timer.__class__.__name__} for guild ID {self.guild_id}: {e}", exc_info=True)
+                await timer.pause()
 
     async def _resume_all_child_timers(self):
-        """Helper method to resume all child timers."""
-        logger.debug(f"Resuming all child timers for guild ID {self.guild_id}.")
+        """Resume roshan, glyph, tormentor, mindful timers."""
         for timer in [self.roshan_timer, self.glyph_timer, self.tormentor_timer, self.mindful_timer]:
             if timer.is_running and timer.is_paused:
-                logger.debug(f"Resuming {timer.__class__.__name__} for guild ID {self.guild_id}.")
-                try:
-                    await timer.resume()
-                except Exception as e:
-                    logger.error(f"Error resuming {timer.__class__.__name__} for guild ID {self.guild_id}: {e}", exc_info=True)
-
-    def close(self):
-        """Clean up resources."""
-        self.events_manager.close()
-        logger.debug(f"GameTimer for guild ID {self.guild_id} closed.")
+                await timer.resume()
 
     def is_running(self):
-        """Check if the game timer is running."""
         return self.timer_task.is_running()
 
     def is_paused(self):
-        """Check if the game timer is paused."""
         return self.paused

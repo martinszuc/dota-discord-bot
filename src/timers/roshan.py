@@ -17,75 +17,57 @@ class RoshanTimer(BaseTimer):
         logger.info(f"RoshanTimer running for guild ID {self.game_timer.guild_id}.")
         try:
             if self.game_timer.mode == 'turbo':
-                min_respawn = 4 * 60  # Turbo mode: 4 minutes minimum respawn
-                max_respawn = 5.5 * 60  # Turbo mode: 5.5 minutes max respawn
-                logger.debug(f"Turbo mode: Roshan respawn between {min_respawn} and {max_respawn} seconds.")
+                min_respawn = 4 * 60   # 4 minutes
+                max_respawn = 5.5 * 60 # 5.5 minutes
             else:
-                min_respawn = 8 * 60  # Regular mode: 8 minutes minimum respawn
-                max_respawn = 11 * 60  # Regular mode: 11 minutes max respawn
-                logger.debug(f"Regular mode: Roshan respawn between {min_respawn} and {max_respawn} seconds.")
+                min_respawn = 8 * 60   # 8 minutes
+                max_respawn = 11 * 60  # 11 minutes
 
-            # Announce Roshan killed
-            await self.announcement.announce(self.game_timer, "Roshan killed!")
-            logger.info(f"Roshan killed in guild ID {self.game_timer.guild_id}. Starting respawn timer.")
+            # Instead of "Roshan killed!", clarify that the user triggered a Roshan timer
+            await self.announcement.announce(self.game_timer, "Roshan timer started.")
+            logger.info(f"Roshan timer started for guild ID {self.game_timer.guild_id}. Respawn window: {min_respawn} - {max_respawn} seconds.")
 
-            # Calculate game time and respawn window
+            # Wait 1 second and then post the possible respawn window
+            await self.sleep_with_pause(1)
             current_game_time_seconds = self.game_timer.time_elapsed
             current_game_minutes = current_game_time_seconds // 60
             min_respawn_minutes = current_game_minutes + (min_respawn // 60)
             max_respawn_minutes = current_game_minutes + (max_respawn // 60)
 
-            # Announce respawn window after 1 second
-            await self.sleep_with_pause(1)
             await self.announcement.announce(
                 self.game_timer,
-                f"Roshan possible from: {min_respawn_minutes} to {max_respawn_minutes} minute."
-            )
-            logger.info(
-                f"Announced Roshan respawn window: {min_respawn_minutes} to {max_respawn_minutes} minutes for guild ID {self.game_timer.guild_id}."
+                f"Roshan can respawn between minute {min_respawn_minutes} and {max_respawn_minutes}."
             )
 
-            # Announce 5-minute warning
+            # 5-min warning
             await self.sleep_with_pause(min_respawn - 300)
             if not self.is_running:
-                logger.info(f"RoshanTimer stopped before 5-minute warning for guild ID {self.game_timer.guild_id}.")
                 return
             await self.announcement.announce(self.game_timer, "Roshan may respawn in 5 minutes!")
-            logger.info(f"5-minute warning for Roshan respawn in guild ID {self.game_timer.guild_id}.")
 
-            # Announce 3-minute warning
+            # 3-min warning
             await self.sleep_with_pause(120)
             if not self.is_running:
-                logger.info(f"RoshanTimer stopped before 3-minute warning for guild ID {self.game_timer.guild_id}.")
                 return
             await self.announcement.announce(self.game_timer, "Roshan may respawn in 3 minutes!")
-            logger.info(f"3-minute warning for Roshan respawn in guild ID {self.game_timer.guild_id}.")
 
-            # Announce 1-minute warning
+            # 1-min warning
             await self.sleep_with_pause(120)
             if not self.is_running:
-                logger.info(f"RoshanTimer stopped before 1-minute warning for guild ID {self.game_timer.guild_id}.")
                 return
             await self.announcement.announce(self.game_timer, "Roshan may respawn in 1 minute!")
-            logger.info(f"1-minute warning for Roshan respawn in guild ID {self.game_timer.guild_id}.")
 
-            # Final announcement before max respawn
+            # Final announcement at min_respawn
             await self.sleep_with_pause(60)
             if not self.is_running:
-                logger.info(
-                    f"RoshanTimer stopped before final respawn announcement for guild ID {self.game_timer.guild_id}.")
                 return
-            await self.announcement.announce(self.game_timer, "Roshan may be up!")
-            logger.info(f"Final warning before Roshan respawn in guild ID {self.game_timer.guild_id}.")
+            await self.announcement.announce(self.game_timer, "Roshan may be up now!")
 
-            # Wait for the remaining time until max respawn
+            # Wait the difference up to max_respawn
             await self.sleep_with_pause(max_respawn - min_respawn)
             if not self.is_running:
-                logger.info(
-                    f"RoshanTimer stopped before final respawn announcement for guild ID {self.game_timer.guild_id}.")
                 return
-            await self.announcement.announce(self.game_timer, "Roshan is up for sure!")
-            logger.info(f"Roshan has respawned in guild ID {self.game_timer.guild_id}.")
+            await self.announcement.announce(self.game_timer, "Roshan is definitely up now!")
 
         except asyncio.CancelledError:
             logger.info(f"RoshanTimer task cancelled for guild ID {self.game_timer.guild_id}.")
