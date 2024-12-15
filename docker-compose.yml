@@ -5,9 +5,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    environment:
-      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
-      - WEBHOOK_ID=${WEBHOOK_ID}
+    env_file:
+      - .env
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data
