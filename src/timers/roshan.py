@@ -31,10 +31,8 @@ class RoshanTimer(BaseTimer):
             await self.sleep_with_pause(1)
 
             # Calculate possible respawn window
-            current_game_time_seconds = self.game_timer.time_elapsed
-            current_game_minutes = current_game_time_seconds // 60
-            min_respawn_minutes = current_game_minutes + (min_respawn // 60)
-            max_respawn_minutes = current_game_minutes + (max_respawn // 60)
+            max_respawn_minutes, min_respawn_minutes = await self.calc_respawn_time(max_respawn, min_respawn)
+
             await self.announcement.announce(
                 self.game_timer,
                 f"Next roshan between minute {min_respawn_minutes} and {max_respawn_minutes}."
@@ -57,3 +55,11 @@ class RoshanTimer(BaseTimer):
         finally:
             self.is_running = False
             logger.debug(f"RoshanTimer concluded for guild ID {self.game_timer.guild_id}.")
+
+    async def calc_respawn_time(self, max_respawn, min_respawn):
+        current_game_time_seconds = self.game_timer.time_elapsed
+        current_game_minutes = current_game_time_seconds // 60
+        # Convert min_respawn and max_respawn to integer minutes
+        min_respawn_minutes = int(current_game_minutes + (min_respawn / 60))
+        max_respawn_minutes = int(current_game_minutes + (max_respawn / 60))
+        return max_respawn_minutes, min_respawn_minutes
