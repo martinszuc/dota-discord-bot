@@ -1,8 +1,10 @@
 import asyncio
 from unittest.mock import AsyncMock, Mock, patch
+
 import pytest
 
 from src.communication.announcement import Announcement
+
 
 @pytest.fixture
 def announcement():

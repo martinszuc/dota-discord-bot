@@ -1,75 +1,75 @@
-# event_definitions.py
-
 from src.utils.utils import min_to_sec
+
+# Define static events for regular game mode.
 regular_static_events = [
     {"mode": "regular", "time": min_to_sec("00:01"), "message": "Game has started"},
-# Creeps
+    # Creeps
     {"mode": "regular", "time": min_to_sec("01:40"), "message": "First Flagbearer in 20 seconds!"},
     {"mode": "regular", "time": min_to_sec("02:30"), "message": "Glyph in 30 seconds!"},
     {"mode": "regular", "time": min_to_sec("03:00"), "message": "Glyph is now available!"},
-# Tormentor
+    # Tormentor
     {"mode": "regular", "time": min_to_sec("19:00"), "message": "First Tormentor in 1 minute!"},
     {"mode": "regular", "time": min_to_sec("20:00"), "message": "Tormentor has spawned!"},
-# Neutrals
+    # Neutrals
     {"mode": "regular", "time": min_to_sec("36:40"), "message": "New neutral items!"},
     {"mode": "regular", "time": min_to_sec("59:30"), "message": "New neutral items in 30 seconds!"},
     {"mode": "regular", "time": min_to_sec("60:00"), "message": "New neutral items!"},
-# Items
+    # Items
     {"mode": "regular", "time": min_to_sec("15:00"), "message": "Shard available!"},
 ]
 
-
+# Define periodic events for regular game mode.
 regular_periodic_events = [
-# Runes
+    # Runes
     {"mode": "regular", "start_time": min_to_sec("05:40"), "interval": min_to_sec("02:00"), "end_time": min_to_sec("99:00"), "message": "Power Runes soon!"},
     {"mode": "regular", "start_time": min_to_sec("06:00"), "interval": min_to_sec("07:00"), "end_time": min_to_sec("60:00"), "message": "XP Runes in 60 seconds!"},
     {"mode": "regular", "start_time": min_to_sec("02:30"), "interval": min_to_sec("03:00"), "end_time": min_to_sec("60:00"), "message": "Gold Runes in 30 seconds!"},
-# Tormentor
+    # Tormentor
     {"mode": "regular", "start_time": min_to_sec("21:00"), "interval": min_to_sec("10:00"), "end_time": min_to_sec("70:00"), "message": "Don't forget Tormentor!"},
-# Creeps
+    # Creeps
     {"mode": "regular", "start_time": min_to_sec("03:00"), "interval": min_to_sec("01:00"), "end_time": min_to_sec("10:00"), "message": "Flagbearer just spawned!"},
     {"mode": "regular", "start_time": min_to_sec("04:30"), "interval": min_to_sec("05:00"), "end_time": min_to_sec("99:00"), "message": "Siege Creep in 30 seconds!"},
     {"mode": "regular", "start_time": min_to_sec("20:00"), "interval": min_to_sec("10:00"), "end_time": min_to_sec("99:00"), "message": "Roshan bottom side!"},
     {"mode": "regular", "start_time": min_to_sec("25:00"), "interval": min_to_sec("10:00"), "end_time": min_to_sec("99:00"), "message": "Roshan top side!"},
-# Lotus
+    # Lotus
     {"mode": "regular", "start_time": min_to_sec("02:30"), "interval": min_to_sec("03:00"), "end_time": min_to_sec("16:00"), "message": "Lotus pool in 30 seconds!"},
     {"mode": "regular", "start_time": min_to_sec("03:00"), "interval": min_to_sec("03:00"), "end_time": min_to_sec("16:00"), "message": "Lotus spawned!"},
-# Neutrals
+    # Neutrals
     {"mode": "regular", "start_time": min_to_sec("07:00"), "interval": min_to_sec("10:00"), "end_time": min_to_sec("27:05"), "message": "New neutral items available!"},
-# Items
+    # Items
     {"mode": "regular", "start_time": min_to_sec("02:15"), "interval": min_to_sec("02:15"), "end_time": min_to_sec("07:30"), "message": "Wards now available!"},
 ]
 
+# Define static events for turbo game mode.
 turbo_static_events = [
     {"mode": "turbo", "time": min_to_sec("00:01"), "message": "Game has started"},
-# Neutrals
+    # Neutrals
     {"mode": "turbo", "time": min_to_sec("16:40"), "message": "New neutral items!"},
     {"mode": "turbo", "time": min_to_sec("27:16"), "message": "New neutral items!"},
-# Items
-    {"mode": "turbo", "time": min_to_sec("7:30"), "message": "Shard available!"},
-# Tormentor
+    # Items
+    {"mode": "turbo", "time": min_to_sec("07:30"), "message": "Shard available!"},
+    # Tormentor
     {"mode": "turbo", "time": min_to_sec("09:00"), "message": "Tormentor in 60 seconds!"},
     {"mode": "turbo", "time": min_to_sec("10:00"), "message": "Tormentor spawned!"},
 ]
 
+# Define periodic events for turbo game mode.
 turbo_periodic_events = [
-# Runes
+    # Runes
     {"mode": "turbo", "start_time": min_to_sec("05:30"), "interval": min_to_sec("02:00"), "end_time": min_to_sec("99:00"), "message": "Power Runes in 30 seconds!!"},
-    {"mode": "turbo", "start_time": min_to_sec("01:40"), "interval": min_to_sec("02:00"), "end_time": min_to_sec("4:10"), "message": "Water runes in 20 seconds!!"},
+    {"mode": "turbo", "start_time": min_to_sec("01:40"), "interval": min_to_sec("02:00"), "end_time": min_to_sec("04:10"), "message": "Water runes in 20 seconds!!"},
     {"mode": "turbo", "start_time": min_to_sec("06:00"), "interval": min_to_sec("07:00"), "end_time": min_to_sec("99:00"), "message": "XP Runes in 60 seconds!"},
     {"mode": "turbo", "start_time": min_to_sec("06:30"), "interval": min_to_sec("07:00"), "end_time": min_to_sec("99:00"), "message": "XP Runes in 30 seconds!"},
-# Creeps
+    # Creeps
     {"mode": "turbo", "start_time": min_to_sec("05:00"), "interval": min_to_sec("05:00"), "end_time": min_to_sec("50:00"), "message": "Siege Creep in 30 seconds!"},
-# Lotus
+    # Lotus
     {"mode": "turbo", "start_time": min_to_sec("01:00"), "interval": min_to_sec("01:30"), "end_time": min_to_sec("13:00"), "message": "Lotus pool in 30 seconds!"},
-# Roshan
-
-    {"mode": "turbo", "start_time": min_to_sec("10:00"), "interval": min_to_sec("10:00"),
-     "end_time": min_to_sec("99:00"), "message": "Roshan bottom side!"},
-    {"mode": "turbo", "start_time": min_to_sec("15:00"), "interval": min_to_sec("10:00"),
-     "end_time": min_to_sec("99:00"), "message": "Roshan top side!"},
+    # Roshan
+    {"mode": "turbo", "start_time": min_to_sec("10:00"), "interval": min_to_sec("10:00"), "end_time": min_to_sec("99:00"), "message": "Roshan bottom side!"},
+    {"mode": "turbo", "start_time": min_to_sec("15:00"), "interval": min_to_sec("10:00"), "end_time": min_to_sec("99:00"), "message": "Roshan top side!"},
 ]
 
+# Define mindful messages to be periodically sent to encourage positive play.
 mindful_messages = [
     {"message": "Remember to take a deep breath and stay calm!"},
     {"message": "Focus on your strategy and enjoy the game!"},
@@ -83,6 +83,8 @@ mindful_messages = [
     {"message": "Stay hydrated, and keep your cool!"},
     {"message": "Remember, it’s just a game. Have fun and relax!"},
 ]
+
+# Define pre-mindful messages to introduce audio calming sounds.
 mindful_pre_messages = [
     {"message": "Take a deep breath. Here are a few moments of soothing nature sounds, just for you."},
     {"message": "For a brief pause, listen to these calming sounds from nature. Let yourself unwind."},
@@ -95,4 +97,3 @@ mindful_pre_messages = [
     {"message": "Allow yourself to slow down. Here’s a snippet of nature’s calm to help you refocus and relax."},
     {"message": "This is your reminder to breathe and let go. Listen to these sounds of nature to find calm."},
 ]
-

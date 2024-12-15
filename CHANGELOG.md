@@ -1,4 +1,21 @@
-# [](/compare/v1.0.0...v) (2024-12-15)
+# [](/compare/v1.1.0...v) (2024-12-15)
+
+
+### Bug Fixes
+
+* python version 7248367
+* removed docker no-cache-dir a4ab127
+* TTS Messages in docker 5443994
+
+
+### Features
+
+* Queue for announcements 4be33d8
+* **test:** added multiple servers test case 707ec13
+
+
+
+# [1.1.0](/compare/v1.0.0...v1.1.0) (2024-12-15)
 
 
 ### Bug Fixes
