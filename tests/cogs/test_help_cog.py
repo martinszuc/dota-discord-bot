@@ -1,9 +1,12 @@
 # tests/cogs/test_help_cog.py
 
-import pytest
 from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 from discord.ext import commands
+
 from src.cogs.help_cog import HelpCog
+
 
 @pytest.fixture
 def bot():

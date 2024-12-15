@@ -2,9 +2,12 @@ import asyncio
 import hashlib
 import os
 import re
-import edge_tts
+
 import discord
+import edge_tts
+
 from src.utils.config import logger, TTS_CACHE_DIR
+
 
 class TTSManager:
     """A class to manage TTS generation, caching, and playback in Discord voice channels."""

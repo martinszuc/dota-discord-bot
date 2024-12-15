@@ -1,15 +1,18 @@
 # src/timer.py
 
 import asyncio
+
 from discord.ext import tasks
+
 from src.communication.announcement import Announcement
-from src.utils.config import logger
 from src.managers.event_manager import EventsManager
 from src.timers.glyph import GlyphTimer
+from src.timers.mindful import MindfulTimer
 from src.timers.roshan import RoshanTimer
 from src.timers.tormentor import TormentorTimer
-from src.timers.mindful import MindfulTimer
-from src.utils.utils import min_to_sec, parse_initial_countdown  # <--- import the new function
+from src.utils.config import logger
+from src.utils.utils import parse_initial_countdown  # <--- import the new function
+
 
 class GameTimer:
     """Class to manage the game timer and events."""

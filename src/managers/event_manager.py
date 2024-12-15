@@ -2,8 +2,8 @@
 
 import random
 
-from src.utils.config import logger
 from sqlalchemy.orm import sessionmaker
+
 from src.database import StaticEvent, PeriodicEvent, engine, ServerSettings
 from src.event_definitions import (
     regular_static_events,
@@ -12,6 +12,7 @@ from src.event_definitions import (
     turbo_periodic_events,
     mindful_messages
 )
+from src.utils.config import logger
 
 # Create a configured "Session" class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

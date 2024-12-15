@@ -1,5 +1,7 @@
 import pytest
+
 from src.utils.utils import min_to_sec, parse_initial_countdown
+
 
 #
 # -----------------------

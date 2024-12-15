@@ -1,8 +1,9 @@
 # tests/communication/test_announcement.py
 import asyncio
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from unittest.mock import AsyncMock, Mock, patch
+
 from src.communication.announcement import Announcement
 
 

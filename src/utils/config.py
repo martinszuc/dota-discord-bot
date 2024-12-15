@@ -1,9 +1,10 @@
 # src/utils/config.py
 
-import os
-import yaml
 import logging
+import os
 from logging.handlers import RotatingFileHandler
+
+import yaml
 
 # Set base directory to the current directory where the script is running
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))

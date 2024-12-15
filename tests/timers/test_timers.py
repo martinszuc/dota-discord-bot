@@ -1,11 +1,13 @@
-import pytest
 import asyncio
-from unittest.mock import AsyncMock, Mock, patch, ANY
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
+
 from src.timer import GameTimer
 from src.timers.glyph import GlyphTimer
 from src.timers.roshan import RoshanTimer
 from src.timers.tormentor import TormentorTimer
-from src.timers.mindful import MindfulTimer
+
 
 #
 # ---------------------

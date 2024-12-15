@@ -1,8 +1,9 @@
 # tests/src/managers/test_event_manager.py
 
-import pytest
 from unittest.mock import MagicMock, patch
-from src.managers.event_manager import EventsManager
+
+import pytest
+
 from src.database import StaticEvent, PeriodicEvent, ServerSettings
 from src.event_definitions import (
     regular_static_events,
@@ -10,6 +11,7 @@ from src.event_definitions import (
     turbo_static_events,
     turbo_periodic_events,
 )
+
 
 @pytest.mark.usefixtures("events_manager")
 class TestEventsManager:

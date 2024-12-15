@@ -2,6 +2,7 @@
 
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.orm import sessionmaker, declarative_base
+
 from src.utils.config import DATABASE_URL
 
 # Create the SQLAlchemy engine

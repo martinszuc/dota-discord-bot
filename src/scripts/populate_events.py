@@ -1,8 +1,10 @@
 # scripts/populate_events.py
 
 from sqlalchemy.orm import sessionmaker
+
 from src.database import StaticEvent, PeriodicEvent, engine
-from src.event_definitions import regular_static_events, regular_periodic_events, turbo_static_events, turbo_periodic_events
+from src.event_definitions import regular_static_events, regular_periodic_events, turbo_static_events, \
+    turbo_periodic_events
 from src.utils.config import logger  # Use the logger from config
 
 # Session setup

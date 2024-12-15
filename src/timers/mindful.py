@@ -1,13 +1,16 @@
 # src/timers/mindful.py
 
 import asyncio
-import random
 import os
+import random
+
 import discord
+
 from src.communication.announcement import Announcement
+from src.event_definitions import mindful_messages, mindful_pre_messages
 from src.timers.base import BaseTimer
 from src.utils.config import logger, MINDFUL_AUDIO_DIR
-from src.event_definitions import mindful_messages, mindful_pre_messages
+
 
 class MindfulTimer(BaseTimer):
     """Manages periodic mindful message announcements, with text and optional audio selection."""

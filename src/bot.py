@@ -3,9 +3,8 @@
 import asyncio
 import ctypes.util
 import os
-import signal
 import re
-import logging
+import signal
 
 import discord
 from discord.ext import commands

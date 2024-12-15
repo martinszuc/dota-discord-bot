@@ -1,9 +1,10 @@
 # tests/commands/test_bot_commands.py
+from unittest.mock import AsyncMock, Mock, patch
+
 import discord
 import pytest
-from unittest.mock import AsyncMock, Mock, patch
 from discord.ext import commands
-from src.bot import bot  # Adjust the import path as necessary
+
 
 @pytest.fixture
 def test_bot():
