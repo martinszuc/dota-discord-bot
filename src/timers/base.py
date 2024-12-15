@@ -3,6 +3,7 @@
 import asyncio
 from src.utils.config import logger
 
+
 class BaseTimer:
     """Base class for Dota timers with pause, resume, and stop functionality."""
 
@@ -55,7 +56,8 @@ class BaseTimer:
                 try:
                     await self.task
                 except asyncio.CancelledError:
-                    logger.info(f"{self.__class__.__name__} task was cancelled for guild ID {self.game_timer.guild_id}.")
+                    logger.info(
+                        f"{self.__class__.__name__} task was cancelled for guild ID {self.game_timer.guild_id}.")
                 self.task = None
             logger.info(f"{self.__class__.__name__} stopped for guild ID {self.game_timer.guild_id}.")
 
@@ -69,3 +71,16 @@ class BaseTimer:
                 duration -= sleep_duration
         except asyncio.CancelledError:
             pass
+
+    async def schedule_warnings(self, warnings_list, announcement):
+        """
+        Helper method to handle repeated "sleep and announce" logic.
+
+        :param warnings_list: A list of tuples: [(delay_in_seconds, message), ...]
+        :param announcement: The Announcement() instance to use for sending messages.
+        """
+        for delay, message in warnings_list:
+            await self.sleep_with_pause(delay)
+            if not self.is_running:
+                return  # If timer was stopped mid-way, exit the loop
+            await announcement.announce(self.game_timer, message)
