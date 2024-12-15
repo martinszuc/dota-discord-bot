@@ -47,33 +47,35 @@ logger.debug(f"Webhook ID loaded: {WEBHOOK_ID}")
 
 @bot.event
 async def on_message(message):
-    logger.info(f"Received message in channel '{message.channel}' from '{message.author}': {message.content}")
+    # Check if the message is from the configured timer channel
+    if message.channel.name == TIMER_CHANNEL_NAME:
+        logger.info(f"Received message in timer channel '{message.channel}' from '{message.author}': {message.content}")
 
-    # Check if the message is from a webhook
-    if message.webhook_id:
-        logger.info("Message is from a webhook.")
-        # Check if the message starts with the command prefix
+        # Check if the message is from a webhook
+        if message.webhook_id:
+            logger.info("Message is from a webhook.")
+            # Check if the message starts with the command prefix
+            if message.content.startswith(PREFIX):
+                logger.info("Processing webhook message as a command.")
+                # Create a context
+                ctx = await bot.get_context(message)
+                # Set the author to the bot's own member (the bot itself)
+                ctx.author = message.guild.me
+                # Process the command
+                try:
+                    await bot.invoke(ctx)
+                    logger.info("Webhook command processed successfully.")
+                except Exception as e:
+                    logger.error(f"Error processing webhook command: {e}", exc_info=True)
+            return
+
+        # Process regular user commands
         if message.content.startswith(PREFIX):
-            logger.info("Processing webhook message as a command.")
-            # Create a context
-            ctx = await bot.get_context(message)
-            # Set the author to the bot's own member (the bot itself)
-            ctx.author = message.guild.me
-            # Process the command
             try:
-                await bot.invoke(ctx)
-                logger.info("Webhook command processed successfully.")
+                await bot.process_commands(message)
+                logger.info("User command processed successfully.")
             except Exception as e:
-                logger.error(f"Error processing webhook command: {e}", exc_info=True)
-        return
-
-    # Process regular user commands
-    if message.content.startswith(PREFIX):
-        try:
-            await bot.process_commands(message)
-            logger.info("User command processed successfully.")
-        except Exception as e:
-            logger.error(f"Error processing user command: {e}", exc_info=True)
+                logger.error(f"Error processing user command: {e}", exc_info=True)
 
 
 @bot.event
