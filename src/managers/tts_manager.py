@@ -4,7 +4,8 @@ import os
 import re
 
 import discord
-import edge_tts
+from edge_tts import Communicate
+
 
 from src.utils.config import logger, TTS_CACHE_DIR
 
@@ -66,7 +67,7 @@ class TTSManager:
         else:
             logger.info(f"Generating TTS audio for new message: '{clean_message}'")
             try:
-                communicate = edge_tts.Communicate(text=clean_message, voice=self.voice)
+                communicate = Communicate(text=clean_message, voice=self.voice)
                 await communicate.save(filename)
                 logger.info(f"Saved TTS audio to {filename}")
             except Exception as e:

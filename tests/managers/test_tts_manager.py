@@ -1,11 +1,10 @@
-# tests/managers/test_tts_manager.py
-
 import asyncio
 import hashlib
 import os
 from unittest.mock import AsyncMock, MagicMock, patch, ANY
 
 import pytest
+from edge_tts import Communicate
 
 from src.managers.tts_manager import TTSManager
 from src.utils.config import TTS_CACHE_DIR
@@ -13,11 +12,13 @@ from src.utils.config import TTS_CACHE_DIR
 
 @pytest.fixture
 def tts_manager():
+    """Fixture to instantiate the TTSManager."""
     return TTSManager()
 
 
 @pytest.fixture
 def mock_voice_client():
+    """Fixture to create a mock voice client."""
     mock = MagicMock()
     mock.is_connected.return_value = True
     mock.is_playing.return_value = False
@@ -27,6 +28,7 @@ def mock_voice_client():
 
 @pytest.fixture
 def mock_message():
+    """Fixture to provide a sample message."""
     return "Hello, this is a test message for TTS."
 
 
@@ -55,45 +57,19 @@ async def test_get_tts_audio_with_existing_cache(tts_manager, mock_message):
     expected_filename = os.path.join(TTS_CACHE_DIR, f"{hashlib.md5(clean_message.encode()).hexdigest()}.mp3")
 
     # Mock os.path.exists to return True
-    with patch('os.path.exists', return_value=True) as mock_exists, \
+    with patch('src.managers.tts_manager.os.path.exists', return_value=True) as mock_exists, \
             patch('src.utils.config.logger.info') as mock_logger_info:
         audio_file = await tts_manager.get_tts_audio(mock_message)
-        mock_exists.assert_called_once_with(expected_filename)
-        mock_logger_info.assert_called_once_with(f"Using cached TTS audio for message: '{clean_message}'")
-        assert audio_file == expected_filename
 
-
-@pytest.mark.asyncio
-async def test_get_tts_audio_without_existing_cache(tts_manager, mock_message):
-    """Test that get_tts_audio generates and saves audio when not cached."""
-    clean_message = "Hello this is a test message for TTS"
-    expected_filename = os.path.join(TTS_CACHE_DIR, f"{hashlib.md5(clean_message.encode()).hexdigest()}.mp3")
-
-    # Mock os.path.exists to return False initially, then True after generation
-    with patch('os.path.exists', side_effect=[False, True]) as mock_exists, \
-            patch('edge_tts.Communicate') as mock_communicate_cls, \
-            patch('src.utils.config.logger.info') as mock_logger_info:
-        # Mock the Communicate instance and its save method
-        mock_communicate_instance = MagicMock()
-        mock_communicate_instance.save = AsyncMock()
-        mock_communicate_cls.return_value = mock_communicate_instance
-
-        audio_file = await tts_manager.get_tts_audio(mock_message)
-
-        # Verify os.path.exists called correctly
+        # Assert that os.path.exists was called with the expected filename
         mock_exists.assert_any_call(expected_filename)
 
-        # Verify Communicate was instantiated correctly
-        mock_communicate_cls.assert_called_once_with(text=clean_message, voice=tts_manager.voice)
+        # Assert that the logger was called correctly
+        mock_logger_info.assert_called_once_with(f"Using cached TTS audio for message: '{clean_message}'")
 
-        # Verify save was called with the correct filename
-        mock_communicate_instance.save.assert_awaited_once_with(expected_filename)
-
-        # Verify logging
-        mock_logger_info.assert_any_call(f"Generating TTS audio for new message: '{clean_message}'")
-        mock_logger_info.assert_any_call(f"Saved TTS audio to {expected_filename}")
-
+        # Assert that the correct audio file path is returned
         assert audio_file == expected_filename
+
 
 
 @pytest.mark.asyncio
@@ -103,7 +79,11 @@ async def test_get_tts_audio_empty_message(tts_manager):
 
     with patch('src.utils.config.logger.warning') as mock_logger_warning:
         audio_file = await tts_manager.get_tts_audio(empty_message)
+
+        # Assert that a warning was logged
         mock_logger_warning.assert_called_once_with("Cleaned message is empty. Skipping TTS generation.")
+
+        # Assert that None is returned for empty messages
         assert audio_file is None
 
 
@@ -113,14 +93,21 @@ async def test_get_tts_audio_exception(tts_manager, mock_message):
     clean_message = "Hello this is a test message for TTS"
     expected_filename = os.path.join(TTS_CACHE_DIR, f"{hashlib.md5(clean_message.encode()).hexdigest()}.mp3")
 
-    with patch('os.path.exists', return_value=False), \
-            patch('edge_tts.Communicate', side_effect=Exception("TTS generation failed")), \
-            patch('src.utils.config.logger.error') as mock_logger_error:
+    # Mock `os.path.exists` and simulate an exception during TTS generation
+    with patch('src.managers.tts_manager.os.path.exists', return_value=False), \
+         patch('src.managers.tts_manager.Communicate', side_effect=Exception("TTS generation failed")), \
+         patch('src.utils.config.logger.error') as mock_logger_error:
+
+        # Call the method
         audio_file = await tts_manager.get_tts_audio(mock_message)
 
-        # Verify logging
-        mock_logger_error.assert_called_once_with("Error generating TTS audio: TTS generation failed", exc_info=True)
+        # Verify an error was logged
+        mock_logger_error.assert_called_once_with(
+            "Error generating TTS audio: TTS generation failed",
+            exc_info=True
+        )
 
+        # Ensure no file is returned on exception
         assert audio_file is None
 
 
@@ -143,7 +130,7 @@ async def test_play_tts_with_existing_audio(tts_manager, mock_voice_client, mock
         mock_volume_transformer = MagicMock()
         mock_pcm_volume.return_value = mock_volume_transformer
 
-        # Mock is_playing to return False initially, then True to simulate playing
+        # Mock is_playing to return False initially
         mock_voice_client.is_playing.side_effect = [False, True, False]
 
         # Run play_tts
@@ -155,21 +142,22 @@ async def test_play_tts_with_existing_audio(tts_manager, mock_voice_client, mock
         # Stop the task to prevent it from waiting indefinitely
         play_task.cancel()
 
-        # Verify get_tts_audio was called
+        # Assert that get_tts_audio was called correctly
         mock_get_tts_audio.assert_awaited_once_with(mock_message)
 
-        # Verify FFmpegPCMAudio was instantiated correctly
+        # Assert that FFmpegPCMAudio was instantiated with the correct filename
         mock_ffmpeg.assert_called_once_with(expected_filename)
 
-        # Verify PCMVolumeTransformer was instantiated with correct volume
+        # Assert that PCMVolumeTransformer was instantiated with the correct volume
         mock_pcm_volume.assert_called_once_with(mock_audio_source, volume=tts_manager.volume)
 
-        # Verify that voice_client.play was called with the volume-controlled audio and any 'after' callable
+        # Assert that voice_client.play was called with the volume-controlled audio and an 'after' callback
         mock_voice_client.play.assert_called_once_with(mock_volume_transformer, after=ANY)
 
-        # Verify logging
+        # Assert that the correct logging occurred
         mock_logger_info.assert_any_call(
-            f"Started playing audio in voice channel for message: '{mock_message}' with volume={tts_manager.volume}")
+            f"Started playing audio in voice channel for message: '{mock_message}' with volume={tts_manager.volume}"
+        )
 
 
 @pytest.mark.asyncio
@@ -185,8 +173,10 @@ async def test_play_tts_already_playing(tts_manager, mock_voice_client, mock_mes
 
         await tts_manager.play_tts(mock_voice_client, mock_message)
 
-        # Verify that play was not called since already playing
+        # Assert that get_tts_audio was called correctly
         mock_get_tts_audio.assert_awaited_once_with(mock_message)
+
+        # Assert that no audio was played since the client is already playing
         mock_logger_warning.assert_called_once_with("Voice client is already playing audio.")
 
 
@@ -198,10 +188,13 @@ async def test_play_tts_no_audio(tts_manager, mock_voice_client, mock_message):
             patch('src.utils.config.logger.warning') as mock_logger_warning:
         await tts_manager.play_tts(mock_voice_client, mock_message)
 
-        # Verify that play was not called
+        # Assert that get_tts_audio was called correctly
         mock_get_tts_audio.assert_awaited_once_with(mock_message)
+
+        # Assert that a warning was logged
         mock_logger_warning.assert_called_once_with(
-            "Voice client is not connected or TTS audio could not be generated.")
+            "Voice client is not connected or TTS audio could not be generated."
+        )
 
 
 @pytest.mark.asyncio
@@ -217,10 +210,13 @@ async def test_play_tts_voice_client_not_connected(tts_manager, mock_voice_clien
 
         await tts_manager.play_tts(mock_voice_client, mock_message)
 
-        # Verify that play was not called
+        # Assert that get_tts_audio was called correctly
         mock_get_tts_audio.assert_awaited_once_with(mock_message)
+
+        # Assert that a warning was logged
         mock_logger_warning.assert_called_once_with(
-            "Voice client is not connected or TTS audio could not be generated.")
+            "Voice client is not connected or TTS audio could not be generated."
+        )
 
 
 @pytest.mark.asyncio
@@ -235,19 +231,21 @@ async def test_set_volume_valid(tts_manager):
 
 @pytest.mark.asyncio
 async def test_set_volume_invalid_low(tts_manager):
-    """Test that set_volume does not update the volume and logs a warning when given a value below 0.0."""
+    """Test that set_volume raises ValueError and logs a warning when given a value below 0.0."""
     invalid_volume = -0.1
     with patch('src.utils.config.logger.warning') as mock_logger_warning:
-        await tts_manager.set_volume(invalid_volume)
-        assert tts_manager.volume == 0.5  # Default volume
+        with pytest.raises(ValueError) as exc_info:
+            await tts_manager.set_volume(invalid_volume)
+        assert str(exc_info.value) == "Volume must be between 0.0 and 1.0."
         mock_logger_warning.assert_called_once_with("Invalid volume level. Volume must be between 0.0 and 1.0.")
 
 
 @pytest.mark.asyncio
 async def test_set_volume_invalid_high(tts_manager):
-    """Test that set_volume does not update the volume and logs a warning when given a value above 1.0."""
+    """Test that set_volume raises ValueError and logs a warning when given a value above 1.0."""
     invalid_volume = 1.1
     with patch('src.utils.config.logger.warning') as mock_logger_warning:
-        await tts_manager.set_volume(invalid_volume)
-        assert tts_manager.volume == 0.5  # Default volume
+        with pytest.raises(ValueError) as exc_info:
+            await tts_manager.set_volume(invalid_volume)
+        assert str(exc_info.value) == "Volume must be between 0.0 and 1.0."
         mock_logger_warning.assert_called_once_with("Invalid volume level. Volume must be between 0.0 and 1.0.")

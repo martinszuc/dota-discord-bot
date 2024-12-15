@@ -1,5 +1,3 @@
-# tests/cogs/test_help_cog.py
-
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -13,10 +11,12 @@ def bot():
     """Create a mock bot instance."""
     return Mock(spec=commands.Bot)
 
+
 @pytest.fixture
 def cog(bot):
     """Instantiate the HelpCog with a mock bot."""
     return HelpCog(bot)
+
 
 @pytest.fixture
 def ctx():
@@ -29,6 +29,7 @@ def ctx():
     mock_ctx.author.name = "TestUser"
     return mock_ctx
 
+
 @pytest.mark.asyncio
 async def test_send_help(cog, ctx):
     """Test that the help command sends the correct embed."""
@@ -39,9 +40,12 @@ async def test_send_help(cog, ctx):
         # Invoke the command directly
         await cog.send_help.callback(cog, ctx)
 
-        # Check that Embed was instantiated correctly
-        MockEmbed.assert_called_once_with(title="Dota Timer Bot - Help", color=0x00ff00)
+        # Check that Embed was instantiated correctly with description
+        MockEmbed.assert_called_once_with(
+            title="Dota Timer Bot - Help",
+            color=0x00ff00,
+            description='List of available commands and their descriptions.'
+        )
 
-        # Check that the embed was sent
-        ctx.send.assert_awaited_once()
-
+        # Check that the embed was sent with embed=mock_embed_instance
+        ctx.send.assert_awaited_once_with(embed=mock_embed_instance)
