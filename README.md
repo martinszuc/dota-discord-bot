@@ -1,5 +1,3 @@
-# README
-
 ## Dota Timer Bot
 
 The **Dota Timer Bot** is a Discord bot designed to provide precise timers and notifications for critical Dota 2 game events. With this bot, you can enhance your in-game strategies and stay ahead of your opponents.
