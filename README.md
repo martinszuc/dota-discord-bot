@@ -51,7 +51,7 @@ For an optimal experience, configure your Dota 2 hotkeys as described in [HOTKEY
 ---
 
 ### 🛠 Contributing
-Feel free to fork this repository and submit pull requests. Contributions are always welcome!
+Thank you for your interest in contributing to this project! Please refer to the [CONTRIBUTORS](CONTRIBUTORS.md) file for detailed instructions on running the bot, setting up permissions, and other guidelines. If you have any questions or need assistance, feel free to contact us at matoszuc@gmail.com.
 
 ### 📜 License
 This project is licensed under the MIT License.
