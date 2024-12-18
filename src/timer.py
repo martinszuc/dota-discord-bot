@@ -140,12 +140,18 @@ class GameTimer:
             if self.paused:
                 await self.pause_event.wait()
 
-            self.time_elapsed += 1  # Advance the timer by 1 second.
+            # Handle countdown and elapsed time logic
+            if self.time_elapsed < 0:
+                self.time_elapsed += 1  # Countdown
+            else:
+                self.time_elapsed += 1  # Elapsed game time
+
             logger.debug(f"Time elapsed: {self.time_elapsed} seconds (guild_id={self.guild_id})")
 
-            # Check and trigger both static and periodic events.
-            await self._check_static_events()
-            await self._check_periodic_events()
+            # Check and trigger both static and periodic events if the game has started
+            if self.time_elapsed >= 0:
+                await self._check_static_events()
+                await self._check_periodic_events()
 
             # Update the status message via the manager
             await self.status_manager.update_status_message(

@@ -29,7 +29,7 @@ class GameStatusMessageManager:
         Update the existing status message with the current game timer state and recent events.
 
         Args:
-            time_elapsed (int): The total time elapsed in seconds.
+            time_elapsed (int): The total time elapsed (or negative countdown) in seconds.
             mode (str): The current game mode.
             recent_events (list): List of recent event strings.
         """
@@ -37,17 +37,24 @@ class GameStatusMessageManager:
             logger.warning("Status message does not exist. Cannot update.")
             return
 
-        # Format elapsed time
-        minutes = time_elapsed // 60
-        seconds = time_elapsed % 60
-        elapsed_str = f"{minutes:02d}:{seconds:02d}"
+        # Determine if the game has started
+        if time_elapsed < 0:
+            # Countdown format
+            minutes = abs(time_elapsed) // 60
+            seconds = abs(time_elapsed) % 60
+            timer_status = f"Countdown: {minutes:02d}:{seconds:02d} (Game not started)"
+        else:
+            # Elapsed time format
+            minutes = time_elapsed // 60
+            seconds = time_elapsed % 60
+            timer_status = f"Game Time: {minutes:02d}:{seconds:02d}"
 
         # Format recent events
         events_str = "\n".join(recent_events) if recent_events else "No recent events."
 
         # Create updated embed content
         embed = discord.Embed(title="Game Timer Status", color=0x00FF00)
-        embed.add_field(name="Timer", value=elapsed_str, inline=False)
+        embed.add_field(name="Timer", value=timer_status, inline=False)
         embed.add_field(name="Mode", value=mode.capitalize(), inline=False)
         embed.add_field(name="Recent Events", value=events_str, inline=False)
 
