@@ -18,7 +18,7 @@ from src.timers.tormentor import TormentorTimer
 @pytest.mark.asyncio
 async def test_game_timer_regular_mode():
     """Test GameTimer in regular mode with negative countdown."""
-    mock_channel = Mock()
+    mock_channel = AsyncMock()
     mock_announcement = Mock()
 
     game_timer = GameTimer(guild_id=1, mode='regular')
@@ -43,7 +43,7 @@ async def test_game_timer_regular_mode():
 @pytest.mark.asyncio
 async def test_game_timer_turbo_mode():
     """Test GameTimer in turbo mode with positive countdown."""
-    mock_channel = Mock()
+    mock_channel = AsyncMock()
     mock_announcement = Mock()
 
     game_timer = GameTimer(guild_id=2, mode='turbo')

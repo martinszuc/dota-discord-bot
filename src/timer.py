@@ -3,6 +3,7 @@ import asyncio
 from discord.ext import tasks
 
 from src.communication.announcement import Announcement
+from src.communication.game_status_manager import GameStatusMessageManager
 from src.managers.event_manager import EventsManager
 from src.timers.glyph import GlyphTimer
 from src.timers.mindful import MindfulTimer
@@ -50,6 +51,8 @@ class GameTimer:
         self.pause_event.set()  # Initially not paused
 
         self.announcement_manager = Announcement()
+        self.recent_events = []
+        self.status_manager = GameStatusMessageManager()  # instantiate the manager
         self.events_manager = EventsManager()
 
         # Instantiate child timers without starting them automatically, except for mindful_timer.
@@ -72,6 +75,9 @@ class GameTimer:
         self.channel = channel
         self.paused = False
         self.pause_event.set()
+
+        # Initialize status message
+        await self.status_manager.create_status_message(channel, self.mode)
 
         # Parse the initial countdown to set the elapsed time.
         self.time_elapsed = parse_initial_countdown(countdown)
@@ -139,6 +145,12 @@ class GameTimer:
             await self._check_static_events()
             await self._check_periodic_events()
 
+            # Update the status message via the manager
+            await self.status_manager.update_status_message(
+                time_elapsed=self.time_elapsed,
+                mode=self.mode,
+                recent_events=self.recent_events
+            )
         except asyncio.CancelledError:
             logger.info(f"GameTimer loop cancelled for guild ID {self.guild_id}.")
         except Exception as e:
@@ -211,3 +223,8 @@ class GameTimer:
             bool: True if the timer is paused, False otherwise.
         """
         return self.paused
+
+    def add_recent_event(self, description: str):
+        self.recent_events.append(description)
+        if len(self.recent_events) > 5:
+            self.recent_events.pop(0)
