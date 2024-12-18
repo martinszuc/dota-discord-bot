@@ -173,7 +173,8 @@ class GameTimer:
             await self.status_manager.update_status_message(
                 time_elapsed=self.time_elapsed,
                 mode=self.mode,
-                recent_events=self.recent_events
+                recent_events=self.recent_events,
+                paused=self.paused
             )
         except asyncio.CancelledError:
             logger.info(f"GameTimer loop cancelled for guild ID {self.guild_id}.")
