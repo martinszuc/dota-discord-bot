@@ -25,6 +25,7 @@ class GameTimer:
         paused (bool): Indicates if the timer is currently paused.
         pause_event (asyncio.Event): Event to handle pausing and resuming.
         announcement_manager (Announcement): Instance to manage announcements.
+        status_manager (GameStatusMessageManager): Manages the dynamic status message.
         events_manager (EventsManager): Instance to manage event data.
         roshan_timer (RoshanTimer): Timer for Roshan's respawn.
         glyph_timer (GlyphTimer): Timer for Glyph cooldowns.
@@ -32,6 +33,7 @@ class GameTimer:
         mindful_timer (MindfulTimer): Timer for sending mindful messages.
         static_events (dict): Static events loaded for the guild.
         periodic_events (dict): Periodic events loaded for the guild.
+        recent_events (list): List of recent event descriptions.
     """
 
     def __init__(self, guild_id: int, mode: str = 'regular'):
@@ -52,7 +54,7 @@ class GameTimer:
 
         self.announcement_manager = Announcement()
         self.recent_events = []
-        self.status_manager = GameStatusMessageManager()  # instantiate the manager
+        self.status_manager = GameStatusMessageManager()  # Instantiate the manager
         self.events_manager = EventsManager()
 
         # Instantiate child timers without starting them automatically, except for mindful_timer.
@@ -166,6 +168,7 @@ class GameTimer:
                 logger.info(
                     f"Triggering static event ID {event_id} for guild ID {self.guild_id}: '{message}' at {self.time_elapsed} seconds.")
                 await self.announcement_manager.announce(self, message)
+                self.add_recent_event(f"Static Event (ID {event_id}): {message}")
                 logger.info(f"Static event triggered: ID={event_id}, time={event['time']}, message='{message}'")
 
     async def _check_periodic_events(self) -> None:
@@ -179,6 +182,7 @@ class GameTimer:
                     logger.info(
                         f"Triggering periodic event ID {event_id} for guild ID {self.guild_id}: '{message}' at {self.time_elapsed} seconds.")
                     await self.announcement_manager.announce(self, message)
+                    self.add_recent_event(f"Periodic Event (ID {event_id}): {message}")
                     logger.info(
                         f"Periodic event triggered: ID={event_id}, message='{message}', interval={event['interval']}")
 
@@ -225,6 +229,23 @@ class GameTimer:
         return self.paused
 
     def add_recent_event(self, description: str):
-        self.recent_events.append(description)
-        if len(self.recent_events) > 5:
+        """
+        Add a description of a recent event to the list, maintaining only the last 7 events.
+
+        Args:
+            description (str): A short description of the event.
+        """
+        self.recent_events.append(f"{self._format_time()} - {description}")
+        if len(self.recent_events) > 7:
             self.recent_events.pop(0)
+
+    def _format_time(self) -> str:
+        """
+        Format the current elapsed time as MM:SS.
+
+        Returns:
+            str: Formatted time string.
+        """
+        minutes = self.time_elapsed // 60
+        seconds = self.time_elapsed % 60
+        return f"{minutes:02d}:{seconds:02d}"
