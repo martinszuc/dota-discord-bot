@@ -108,6 +108,7 @@ class GameTimer:
         logger.info(f"Stopping GameTimer for guild ID {self.guild_id}.")
         self.timer_task.cancel()
         self.paused = False
+        self.status_manager.status_message = None
         await self._stop_all_child_timers()
         logger.info(f"GameTimer and all child timers stopped for guild ID {self.guild_id}.")
 
