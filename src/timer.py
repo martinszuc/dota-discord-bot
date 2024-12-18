@@ -168,7 +168,7 @@ class GameTimer:
                 logger.info(
                     f"Triggering static event ID {event_id} for guild ID {self.guild_id}: '{message}' at {self.time_elapsed} seconds.")
                 await self.announcement_manager.announce(self, message)
-                self.add_recent_event(f"Static Event (ID {event_id}): {message}")
+                self.add_recent_event(f"(ID {event_id}): {message}")
                 logger.info(f"Static event triggered: ID={event_id}, time={event['time']}, message='{message}'")
 
     async def _check_periodic_events(self) -> None:
@@ -182,7 +182,7 @@ class GameTimer:
                     logger.info(
                         f"Triggering periodic event ID {event_id} for guild ID {self.guild_id}: '{message}' at {self.time_elapsed} seconds.")
                     await self.announcement_manager.announce(self, message)
-                    self.add_recent_event(f"Periodic Event (ID {event_id}): {message}")
+                    self.add_recent_event(f"(ID {event_id}): {message}")
                     logger.info(
                         f"Periodic event triggered: ID={event_id}, message='{message}', interval={event['interval']}")
 
