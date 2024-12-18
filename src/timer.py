@@ -228,14 +228,15 @@ class GameTimer:
         """
         return self.paused
 
-    def add_recent_event(self, description: str):
+    def add_recent_event(self, message: str):
         """
-        Add a description of a recent event to the list, maintaining only the last 7 events.
+        Add a recent event description to the event list.
 
         Args:
-            description (str): A short description of the event.
+            message (str): The event message to add.
         """
-        self.recent_events.append(f"{self._format_time()} - {description}")
+        timestamp = self._format_time()
+        self.recent_events.append(f"{timestamp} - {message}")
         if len(self.recent_events) > 7:
             self.recent_events.pop(0)
 

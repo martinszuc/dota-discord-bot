@@ -15,7 +15,6 @@ class GameStatusMessageManager:
         Create an initial status message in the given channel.
         Returns the created message instance.
         """
-        # Initial placeholder message
         try:
             self.status_message = await channel.send("Initializing game status...")
             logger.info(f"Created a new status message (ID: {self.status_message.id}) in channel '{channel.name}'.")
@@ -28,7 +27,11 @@ class GameStatusMessageManager:
     async def update_status_message(self, time_elapsed: int, mode: str, recent_events: list):
         """
         Update the existing status message with the current game timer state and recent events.
-        If the message does not exist, this function will fail silently or handle re-creation if desired.
+
+        Args:
+            time_elapsed (int): The total time elapsed in seconds.
+            mode (str): The current game mode.
+            recent_events (list): List of recent event strings.
         """
         if self.status_message is None:
             logger.warning("Status message does not exist. Cannot update.")
@@ -42,15 +45,14 @@ class GameStatusMessageManager:
         # Format recent events
         events_str = "\n".join(recent_events) if recent_events else "No recent events."
 
-        # Create updated content
-        new_content = (
-            f"**Game Timer**: {elapsed_str}\n"
-            f"**Mode**: {mode}\n"
-            f"**Recent Events**:\n{events_str}"
-        )
+        # Create updated embed content
+        embed = discord.Embed(title="Game Timer Status", color=0x00FF00)
+        embed.add_field(name="Timer", value=elapsed_str, inline=False)
+        embed.add_field(name="Mode", value=mode.capitalize(), inline=False)
+        embed.add_field(name="Recent Events", value=events_str, inline=False)
 
         try:
-            await self.status_message.edit(content=new_content)
+            await self.status_message.edit(embed=embed)
             logger.debug(f"Status message (ID: {self.status_message.id}) updated successfully.")
         except discord.DiscordException as e:
             logger.error(f"Failed to edit status message: {e}", exc_info=True)
