@@ -121,6 +121,14 @@ class GameTimer:
         await self._pause_all_child_timers()
         logger.info(f"GameTimer and all child timers paused for guild ID {self.guild_id}.")
 
+        # Update the status message to reflect the paused state
+        await self.status_manager.update_status_message(
+            time_elapsed=self.time_elapsed,
+            mode=self.mode,
+            recent_events=self.recent_events,
+            paused=self.paused
+        )
+
     async def unpause(self) -> None:
         """
         Resume the game timer and all associated child timers if they were paused.
@@ -130,6 +138,14 @@ class GameTimer:
         self.pause_event.set()
         await self._resume_all_child_timers()
         logger.info(f"GameTimer and all child timers resumed for guild ID {self.guild_id}.")
+
+        # Update the status message to reflect the resumed state
+        await self.status_manager.update_status_message(
+            time_elapsed=self.time_elapsed,
+            mode=self.mode,
+            recent_events=self.recent_events,
+            paused=self.paused
+        )
 
     @tasks.loop(seconds=1)
     async def timer_task(self) -> None:

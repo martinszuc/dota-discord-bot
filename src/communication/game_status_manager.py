@@ -24,7 +24,7 @@ class GameStatusMessageManager:
             self.status_message = None
             return None
 
-    async def update_status_message(self, time_elapsed: int, mode: str, recent_events: list):
+    async def update_status_message(self, time_elapsed: int, mode: str, recent_events: list, paused: bool):
         """
         Update the existing status message with the current game timer state and recent events.
 
@@ -32,6 +32,7 @@ class GameStatusMessageManager:
             time_elapsed (int): The total time elapsed (or negative countdown) in seconds.
             mode (str): The current game mode.
             recent_events (list): List of recent event strings.
+            paused (bool): Indicates if the game timer is paused.
         """
         if self.status_message is None:
             logger.warning("Status message does not exist. Cannot update.")
@@ -48,6 +49,9 @@ class GameStatusMessageManager:
             minutes = time_elapsed // 60
             seconds = time_elapsed % 60
             timer_status = f"Game Time: {minutes:02d}:{seconds:02d}"
+
+        if paused:
+            timer_status += " (Paused)"
 
         # Format recent events
         events_str = "\n".join(recent_events) if recent_events else "No recent events."
