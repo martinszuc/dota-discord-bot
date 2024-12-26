@@ -51,7 +51,7 @@ class RoshanTimer(BaseTimer):
             await self.sleep_with_pause(1)
 
             # Calculate respawn window in minutes
-            max_respawn_minutes, min_respawn_minutes = await self.calc_respawn_time(max_respawn, min_respawn)
+            max_respawn_minutes, min_respawn_minutes = self.calc_respawn_time(max_respawn, min_respawn)
             respawn_window_message = (
                 f"Next Roshan between minute {min_respawn_minutes} and {max_respawn_minutes}."
             )
@@ -76,7 +76,7 @@ class RoshanTimer(BaseTimer):
             self.is_running = False
             logger.debug(f"RoshanTimer concluded for guild ID {self.game_timer.guild_id}.")
 
-    async def calc_respawn_time(self, max_respawn: float, min_respawn: float) -> tuple:
+    def calc_respawn_time(self, max_respawn: float, min_respawn: float) -> tuple:
         """
         Calculate the respawn time window in minutes based on elapsed game time.
 
@@ -89,7 +89,7 @@ class RoshanTimer(BaseTimer):
         """
         current_game_time_seconds = self.game_timer.time_elapsed
         current_game_minutes = current_game_time_seconds // 60
-        min_respawn_minutes = int(current_game_minutes + (min_respawn / 60))
-        max_respawn_minutes = int(current_game_minutes + (max_respawn / 60))
+        min_respawn_minutes = int(current_game_minutes + (min_respawn // 60))
+        max_respawn_minutes = int(current_game_minutes + (max_respawn // 60))
         logger.debug(f"Calculated respawn time window: {min_respawn_minutes}-{max_respawn_minutes} minutes.")
         return max_respawn_minutes, min_respawn_minutes
