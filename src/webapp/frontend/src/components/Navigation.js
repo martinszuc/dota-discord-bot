@@ -8,7 +8,7 @@ const Navigation = ({ user, onLogout }) => {
   return (
     <nav className="navigation">
       <div className="nav-logo">
-        <img src="/logo.png" alt="Dota Timer Bot" className="logo-image" />
+        <img src="/favicon-32x32.png" alt="Dota Timer Bot" className="logo-image" />
         <h1 className="logo-text">Dota Timer Bot</h1>
       </div>
 

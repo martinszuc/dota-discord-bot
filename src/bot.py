@@ -9,7 +9,7 @@ import signal
 import discord
 from discord.ext import commands
 
-from src.managers.event_manager import EventsManager
+from managers.event_manager import EventsManager
 from src.timer import GameTimer
 from src.utils.config import PREFIX, TIMER_CHANNEL_NAME, VOICE_CHANNEL_NAME, logger, COGS_DIRECTORY
 from src.utils.utils import min_to_sec

@@ -62,6 +62,7 @@ function App() {
                 <Route path="/events" element={<EventsManager />} />
                 <Route path="/game" element={<GameControls />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/login" element={<Navigate to="/" replace />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </div>

@@ -79,12 +79,6 @@ const Login = ({ onLogin }) => {
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
-
-        <div className="login-note">
-          <p>Default credentials:</p>
-          <p>Username: <strong>admin</strong></p>
-          <p>Password: <strong>admin</strong></p>
-        </div>
       </div>
     </div>
   );
