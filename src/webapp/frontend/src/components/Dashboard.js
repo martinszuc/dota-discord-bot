@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchStatus, fetchLogs, fetchEvents } from '../api';
+import GSIStatus from './GSIStatus';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -87,6 +88,9 @@ const Dashboard = () => {
   return (
     <div className="dashboard">
       <h1>Dota Timer Bot Dashboard</h1>
+
+      {/* GSI Status Section */}
+      <GSIStatus />
 
       <div className="status-section">
         <h2>Bot Status</h2>

@@ -12,6 +12,7 @@ services:
       - WEBHOOK_ID=${WEBHOOK_ID}
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - GSI_AUTH_TOKEN=${GSI_AUTH_TOKEN}  # Added GSI auth token
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data

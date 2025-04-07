@@ -117,3 +117,13 @@ export const cancelTormentorTimer = (guild_id) => {
 export const fetchLogs = (limit = 100, offset = 0) => {
   return api.get(`/logs?limit=${limit}&offset=${offset}`);
 };
+
+// GSI endpoints
+export const fetchGSIStatus = () => {
+  return api.get('/gsi/status');
+};
+
+export const toggleGSISync = (guild_id) => {
+  return api.post('/commands/gsi-sync', { guild_id });
+};
+

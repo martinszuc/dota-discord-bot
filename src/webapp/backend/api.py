@@ -1,6 +1,7 @@
 """
 API endpoints for the Dota Discord Bot Dashboard.
 """
+import asyncio
 
 from flask import Blueprint, request, jsonify
 from typing import Dict, List, Any, Optional, Union
@@ -439,6 +440,57 @@ def get_logs() -> Dict[str, Any]:
             "status": "success",
             "data": logs
         })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+# GSI-related commands
+@api_blueprint.route('/commands/gsi-sync', methods=['POST'])
+def toggle_gsi_sync():
+    """Toggle GSI auto-sync for a guild."""
+    data = request.json
+    try:
+        guild_id = data.get('guild_id')
+
+        if not guild_id:
+            return jsonify({
+                "status": "error",
+                "message": "guild_id is required"
+            }), 400
+
+        # Mock the context for the command
+        class MockContext:
+            def __init__(self, guild_id):
+                self.guild = type('obj', (object,), {
+                    'id': guild_id,
+                })
+                self.channel = type('obj', (object,), {
+                    'id': None,
+                    'send': lambda *args, **kwargs: None
+                })
+                self.author = type('obj', (object,), {
+                    'name': 'WebApp'
+                })
+
+        ctx = MockContext(guild_id)
+
+        # Find the GSI cog and execute the command
+        from discord.ext.commands import Bot
+        gsi_cog = bot.get_cog('GSICog')
+        if gsi_cog:
+            asyncio.create_task(gsi_cog.gsi_sync(ctx))
+            return jsonify({
+                "status": "success",
+                "data": {"message": "GSI sync toggled"}
+            })
+        else:
+            return jsonify({
+                "status": "error",
+                "message": "GSI cog not found"
+            }), 500
+
     except Exception as e:
         return jsonify({
             "status": "error",

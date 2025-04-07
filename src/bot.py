@@ -22,6 +22,14 @@ if opus_lib:
 else:
     logger.warning("Opus library not found. Voice features may not work.")
 
+# Load GSI configuration
+try:
+    from src.gsi.config import load_gsi_config
+    gsi_config = load_gsi_config()
+    logger.info("GSI configuration loaded")
+except ImportError:
+    logger.warning("GSI module not available")
+
 # Initialize Discord intents
 intents = discord.Intents.default()
 intents.message_content = True

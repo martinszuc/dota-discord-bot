@@ -9,11 +9,10 @@ from flask import Flask, send_from_directory, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 
-# If you have other blueprints like api_blueprint, import them as needed:
-# from backend.api import api_blueprint
-
-# Import the new environment-based auth blueprint
+# Import all blueprints
 from backend.auth import auth_blueprint
+from backend.api import api_blueprint
+from backend.gsi_endpoint import gsi_blueprint
 
 # Load environment variables from .env
 load_dotenv()
@@ -22,8 +21,9 @@ app = Flask(__name__, static_folder='frontend/build')
 CORS(app)
 
 # Register your routes
-# app.register_blueprint(api_blueprint, url_prefix='/api')  # If you still use it
+app.register_blueprint(api_blueprint, url_prefix='/api')
 app.register_blueprint(auth_blueprint, url_prefix='/auth')
+app.register_blueprint(gsi_blueprint, url_prefix='/api/gsi')  # Register GSI blueprint
 
 # Serve the React build
 @app.route('/', defaults={'path': ''})
