@@ -131,7 +131,7 @@ For more control or if you prefer not to use Docker:
 
 ## 🔧 Setup Hotkeys
 
-For optimal gameplay, configure your Dota 2 hotkeys as described in [HOTKEYS_SETUP.md](HOTKEYS_SETUP.md).
+For optimal gameplay, configure your Dota 2 hotkeys as described in [HOTKEYS_SETUP.md](docs/HOTKEYS_SETUP.md).
 
 This allows you to trigger timers with a single key press while playing, without needing to type commands.
 
@@ -281,7 +281,7 @@ console_log_level: "INFO"
 
 ## 🛠 Contributing
 
-Thank you for your interest in contributing to this project! Please refer to the [CONTRIBUTORS](CONTRIBUTORS.md) file for detailed instructions.
+Thank you for your interest in contributing to this project! Please refer to the [CONTRIBUTORS](docs/CONTRIBUTORS.md) file for detailed instructions.
 
 To submit a change:
 
