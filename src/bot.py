@@ -120,19 +120,28 @@ async def on_guild_join(guild):
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("You are missing required arguments for this command.")
-        logger.warning(f"Missing arguments in command '{ctx.command}'. Context: {ctx.message.content}")
+        param = error.param.name
+        await ctx.send(f"Missing required argument: `{param}`. Type `{PREFIX}bot-help` for command usage.")
+        logger.warning(f"Missing argument '{param}' in command '{ctx.command}'. Context: {ctx.message.content}")
     elif isinstance(error, commands.BadArgument):
-        await ctx.send("One or more arguments are invalid.")
+        await ctx.send(f"Invalid argument provided. Type `{PREFIX}bot-help` for correct usage.")
         logger.warning(f"Bad arguments in command '{ctx.command}'. Context: {ctx.message.content}")
     elif isinstance(error, commands.CommandNotFound):
-        await ctx.send(f"Command not found. Type {PREFIX}bot-help for a list of available commands.")
-        logger.warning(f"Command not found. Context: {ctx.message.content}")
+        command = ctx.message.content.split()[0]
+        await ctx.send(f"Command `{command}` not found. Type `{PREFIX}bot-help` for available commands.")
+        logger.warning(f"Command not found: '{command}'. Context: {ctx.message.content}")
     elif isinstance(error, commands.CheckFailure):
-        await ctx.send("You do not have permission to use this command.")
+        await ctx.send("You don't have permission to use this command.")
         logger.warning(f"Permission denied for user '{ctx.author}'. Command: {ctx.command}")
+    elif isinstance(error, commands.CommandOnCooldown):
+        retry_after = round(error.retry_after)
+        await ctx.send(f"Command on cooldown. Try again in {retry_after} second(s).")
+        logger.info(f"Command '{ctx.command}' on cooldown for user '{ctx.author}'.")
+    elif isinstance(error, commands.MaxConcurrencyReached):
+        await ctx.send("This command is already running. Please wait for it to finish.")
+        logger.info(f"Max concurrency reached for command '{ctx.command}'.")
     else:
-        await ctx.send("An unexpected error occurred.")
+        await ctx.send("An unexpected error occurred. Please try again later.")
         logger.error(f"Unhandled error in command '{ctx.command}': {error}", exc_info=True)
 
 

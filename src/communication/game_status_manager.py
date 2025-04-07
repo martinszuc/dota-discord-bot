@@ -1,6 +1,7 @@
 import discord
 from src.utils.config import logger
 
+
 class GameStatusMessageManager:
     """
     Handles the creation and updating of a dynamic status message in the timer-bot channel.
@@ -16,7 +17,17 @@ class GameStatusMessageManager:
         Returns the created message instance.
         """
         try:
-            self.status_message = await channel.send("Initializing game status...")
+            embed = discord.Embed(
+                title="Dota Timer Bot Status",
+                description="Initializing game timer...",
+                color=0x2E7D32  # Green color
+            )
+
+            embed.add_field(name="Status", value="⏱️ Starting...", inline=False)
+            embed.add_field(name="Mode", value=mode.capitalize(), inline=True)
+            embed.set_footer(text="Game timer will update shortly")
+
+            self.status_message = await channel.send(embed=embed)
             logger.info(f"Created a new status message (ID: {self.status_message.id}) in channel '{channel.name}'.")
             return self.status_message
         except discord.DiscordException as e:
@@ -43,24 +54,60 @@ class GameStatusMessageManager:
             # Countdown format
             minutes = abs(time_elapsed) // 60
             seconds = abs(time_elapsed) % 60
-            timer_status = f"Countdown: {minutes:02d}:{seconds:02d} (Game not started)"
+            timer_status = f"⏱️ Countdown: **{minutes:02d}:{seconds:02d}**"
+            description = "Game will start soon"
+            color = 0xFFA726  # Orange color for countdown
         else:
             # Elapsed time format
             minutes = time_elapsed // 60
             seconds = time_elapsed % 60
-            timer_status = f"Game Time: {minutes:02d}:{seconds:02d}"
+            timer_status = f"⏱️ Game Time: **{minutes:02d}:{seconds:02d}**"
+            description = "Game in progress"
+            color = 0x2E7D32  # Green color for active game
 
+        # Add paused indicator
         if paused:
-            timer_status += " (Paused)"
+            timer_status += " (⏸️ Paused)"
+            description += " (Paused)"
+            color = 0x757575  # Gray color for paused game
 
-        # Format recent events
-        events_str = "\n".join(recent_events) if recent_events else "No recent events."
+        # Format recent events with emojis for better visibility
+        events_str = ""
+        if recent_events:
+            for i, event in enumerate(recent_events):
+                # Add emoji based on event content
+                if "Roshan" in event:
+                    emoji = "🛡️"
+                elif "Glyph" in event:
+                    emoji = "🔮"
+                elif "Tormentor" in event:
+                    emoji = "🐉"
+                elif "Bounty" in event or "Rune" in event:
+                    emoji = "💎"
+                elif "neutral" in event.lower():
+                    emoji = "📦"
+                else:
+                    emoji = "📢"
+
+                # Add the event with emoji and proper formatting
+                events_str += f"{emoji} {event}\n"
+        else:
+            events_str = "No recent events."
 
         # Create updated embed content
-        embed = discord.Embed(title="Game Timer Status", color=0x00FF00)
+        embed = discord.Embed(
+            title=f"Dota Timer Bot - {mode.capitalize()} Mode",
+            description=description,
+            color=color,
+            timestamp=discord.utils.utcnow()
+        )
+
         embed.add_field(name="Timer", value=timer_status, inline=False)
-        embed.add_field(name="Mode", value=mode.capitalize(), inline=False)
         embed.add_field(name="Recent Events", value=events_str, inline=False)
+
+        # Add additional footer info
+        footer_text = f"Use !bot-help for commands | Game Mode: {mode.capitalize()}"
+        embed.set_footer(text=footer_text)
 
         try:
             await self.status_message.edit(embed=embed)
