@@ -1,0 +1,238 @@
+.game-controls {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.controls-container {
+  background-color: white;
+  border-radius: var(--border-radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+}
+
+.guild-selector {
+  margin-bottom: 20px;
+}
+
+.guild-selector label {
+  font-weight: 500;
+  margin-right: 10px;
+}
+
+.guild-selector input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: var(--border-radius);
+  width: 200px;
+}
+
+.control-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.start-timer-form {
+  background-color: #f8f8f8;
+  border-radius: var(--border-radius);
+  padding: 20px;
+  grid-column: 1 / 3;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.timer-actions {
+  background-color: #f8f8f8;
+  border-radius: var(--border-radius);
+  padding: 20px;
+  grid-column: 1 / 3;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.control-button {
+  padding: 10px 15px;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-weight: 500;
+  color: white;
+  transition: background-color 0.3s;
+  flex: 1;
+  min-width: 120px;
+}
+
+.control-button.red {
+  background-color: var(--error-color);
+}
+
+.control-button.red:hover {
+  background-color: #d32f2f;
+}
+
+.control-button.green {
+  background-color: var(--success-color);
+}
+
+.control-button.green:hover {
+  background-color: #388e3c;
+}
+
+.control-button.yellow {
+  background-color: var(--warning-color);
+}
+
+.control-button.yellow:hover {
+  background-color: #f57c00;
+}
+
+.control-button.blue {
+  background-color: #2196f3;
+}
+
+.control-button.blue:hover {
+  background-color: #1976d2;
+}
+
+.control-button:disabled {
+  background-color: #b0b0b0;
+  cursor: not-allowed;
+}
+
+.special-timers {
+  grid-column: 1 / 3;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.timer-card {
+  background-color: #f8f8f8;
+  border-radius: var(--border-radius);
+  padding: 20px;
+}
+
+.timer-card h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: var(--secondary-dark);
+}
+
+.status {
+  margin-bottom: 15px;
+  font-weight: 500;
+}
+
+.active {
+  color: var(--success-color);
+}
+
+.inactive {
+  color: #9e9e9e;
+}
+
+.active-timer-display {
+  background-color: white;
+  border-radius: var(--border-radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+
+.timer-info {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.timer-value {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px 25px;
+  background-color: var(--background-dark);
+  color: white;
+  border-radius: var(--border-radius);
+  margin-right: 20px;
+}
+
+.timer-value .label {
+  font-size: 0.8rem;
+  margin-bottom: 5px;
+}
+
+.timer-value .value {
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.timer-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+}
+
+.detail-item .label {
+  font-weight: 500;
+  margin-right: 10px;
+  width: 80px;
+}
+
+.recent-events {
+  margin-top: 20px;
+  border-top: 1px solid #eee;
+  padding-top: 15px;
+}
+
+.recent-events ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: var(--border-radius);
+}
+
+.recent-events li {
+  padding: 10px 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.recent-events li:last-child {
+  border-bottom: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+  .control-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .start-timer-form, .timer-actions {
+    grid-column: auto;
+  }
+
+  .special-timers {
+    grid-column: auto;
+    grid-template-columns: 1fr;
+  }
+}

@@ -12,4 +12,12 @@ services:
       - ./data:/app/data
       - ./audio:/app/audio
       - ./tts_cache:/app/tts_cache
+    ports:
+      - "5000:5000"  # Expose web dashboard port
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

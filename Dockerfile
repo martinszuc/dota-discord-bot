@@ -5,6 +5,7 @@ FROM python:3.9.13-slim
 ENV DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
 ENV WEBHOOK_ID=${WEBHOOK_ID}
 ENV PYTHONPATH=/app
+ENV NODE_VERSION=16.x
 
 # Set the working directory
 WORKDIR /app
@@ -15,7 +16,15 @@ RUN apt-get update && apt-get install -y \
     libffi-dev \
     libssl-dev \
     python3-dev \
-    ffmpeg && rm -rf /var/lib/apt/lists/*
+    ffmpeg \
+    curl \
+    gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js for the web dashboard
+RUN curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
 
 # Upgrade pip to the latest version
 RUN pip install --upgrade pip
@@ -24,13 +33,21 @@ RUN pip install --upgrade pip
 COPY pip_requirements.txt requirements.txt
 
 # Install Python dependencies
-RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt \
+    && pip install flask flask-cors gunicorn
 
 # Copy the bot code
 COPY . /app
 
-# Expose any ports if necessary (Discord bots don't need it, but for debug purposes)
-EXPOSE 8080
+# Build the React frontend
+WORKDIR /app/src/webapp/frontend
+RUN npm install && npm run build
 
-# Command to run the bot
-CMD ["python", "src/bot.py"]
+# Return to the app directory
+WORKDIR /app
+
+# Expose port for the web dashboard
+EXPOSE 5000
+
+# Command to run both the bot and the web dashboard
+CMD ["sh", "-c", "python src/bot.py & python src/webapp/server.py"]
