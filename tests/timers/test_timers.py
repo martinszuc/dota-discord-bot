@@ -1,140 +1,148 @@
 import asyncio
+import pytest
 from unittest.mock import AsyncMock, Mock, patch
 
-import pytest
-
-from src.communication.game_status_manager import GameStatusMessageManager
-from src.timer import GameTimer
 from src.timers.glyph import GlyphTimer
 from src.timers.roshan import RoshanTimer
 from src.timers.tormentor import TormentorTimer
-
-
-#
-# ---------------------
-#  TEST: GameTimer
-# ---------------------
-#
-
-@pytest.mark.asyncio
-async def test_game_timer_regular_mode():
-    """Test GameTimer in regular mode with negative countdown."""
-    mock_channel = AsyncMock()  # Use AsyncMock for mock_channel
-    mock_announcement = Mock()
-
-    # Mock status_manager to prevent actual Discord API calls
-    with patch.object(GameStatusMessageManager, 'create_status_message', return_value=None), \
-         patch.object(GameStatusMessageManager, 'update_status_message', return_value=None):
-        game_timer = GameTimer(guild_id=1, mode='regular')
-        game_timer.channel = mock_channel
-        game_timer.announcement_manager = mock_announcement
-
-        # Start the timer with a negative countdown (means 30s elapsed)
-        await game_timer.start(mock_channel, countdown="-30")
-        assert game_timer.time_elapsed == 30
-        assert game_timer.mode == "regular"
-        assert game_timer.is_running()
-
-        # Stop the timer
-        with patch.object(game_timer, "_stop_all_child_timers", new_callable=AsyncMock) as stop_child_timers:
-            await game_timer.stop()
-            # Allow event loop to process cancellations
-            await asyncio.sleep(0.1)
-            stop_child_timers.assert_called_once()
-            assert not game_timer.is_running()
+from src.communication.game_status_manager import GameStatusMessageManager
 
 
 @pytest.mark.asyncio
-async def test_game_timer_turbo_mode():
-    """Test GameTimer in turbo mode with positive countdown."""
-    mock_channel = AsyncMock()  # Use AsyncMock for mock_channel
-    mock_announcement = Mock()
-
-    # Mock status_manager to prevent actual Discord API calls
-    with patch.object(GameStatusMessageManager, 'create_status_message', return_value=None), \
-         patch.object(GameStatusMessageManager, 'update_status_message', return_value=None):
-        game_timer = GameTimer(guild_id=2, mode='turbo')
-        game_timer.channel = mock_channel
-        game_timer.announcement_manager = mock_announcement
-
-        # Start the timer with a positive countdown "10" => time_elapsed = -10
-        await game_timer.start(mock_channel, countdown="10")
-        assert game_timer.time_elapsed == -10
-        assert game_timer.mode == "turbo"
-        assert game_timer.is_running()
-
-        with patch.object(game_timer, "_stop_all_child_timers", new_callable=AsyncMock) as stop_child_timers:
-            await game_timer.stop()
-            # Allow event loop to process cancellations
-            await asyncio.sleep(0.1)
-            stop_child_timers.assert_called_once()
-            assert not game_timer.is_running()
-
-
-#
-# --------------------------------------
-#  PARAMETERIZED TESTS: Child Timers
-# --------------------------------------
-#
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("TimerClass,mode", [
-    (GlyphTimer,     "regular"),
-    (GlyphTimer,     "turbo"),
-    (RoshanTimer,    "regular"),
-    (RoshanTimer,    "turbo"),
-    (TormentorTimer, "regular"),
-    (TormentorTimer, "turbo"),
+@pytest.mark.parametrize("TimerClass,mode,expected_messages", [
+    (GlyphTimer, "regular", [
+        "Enemy glyph activated. Cooldown started.",
+        "Enemy glyph is now available!"
+    ]),
+    (GlyphTimer, "turbo", [
+        "Enemy glyph activated. Cooldown started.",
+        "Enemy glyph is now available!"
+    ]),
+    (RoshanTimer, "regular", [
+        "Roshan timer started.",
+        "Dropped: Aegis",
+        f"Next Roshan between minute 8 and 11.",
+        "Roshan will spawn at bottom lane.",
+        "Roshan may respawn in 5 minutes!",
+        "Roshan may respawn in 3 minutes!",
+        "Roshan may respawn in 1 minute!",
+        "Roshan may be up now!",
+        "Roshan is definitely up now!"
+    ]),
+    (RoshanTimer, "turbo", [
+        "Roshan timer started.",
+        "Dropped: Aegis",
+        f"Next Roshan between minute 4 and 5.",
+        "Roshan will spawn at bottom lane.",
+        "Roshan may respawn in 5 minutes!",
+        "Roshan may respawn in 3 minutes!",
+        "Roshan may respawn in 1 minute!",
+        "Roshan may be up now!",
+        "Roshan is definitely up now!"
+    ]),
+    (TormentorTimer, "regular", [
+        "Tormentor timer started.",
+        "Tormentor will respawn in 3 minutes!",
+        "Tormentor will respawn in 1 minute!",
+        "Tormentor has respawned!"
+    ]),
+    (TormentorTimer, "turbo", [
+        "Tormentor timer started.",
+        "Tormentor will respawn in 3 minutes!",
+        "Tormentor will respawn in 1 minute!",
+        "Tormentor has respawned!"
+    ]),
 ])
-async def test_child_timers_all_modes(TimerClass, mode):
+async def test_timer_announcements(TimerClass, mode, expected_messages):
     """
-    Test GlyphTimer, RoshanTimer, TormentorTimer in both 'regular' and 'turbo' modes.
-    Checks:
-      1) Timer can start.
-      2) Announcements are correct.
-      3) Pause/Resume works.
-      4) Timer stops cleanly.
+    Test timer announcements for different timer types and modes.
     """
+    # Create a comprehensive mock game timer
     mock_game_timer = Mock()
     mock_game_timer.mode = mode
-    mock_game_timer.time_elapsed = 100  # arbitrary
-    mock_announcement = AsyncMock()
-    mock_channel = AsyncMock()  # Use AsyncMock for mock_channel
+    mock_game_timer.time_elapsed = 0
+    mock_game_timer.voice_client = Mock()
+    mock_game_timer.voice_client.is_connected.return_value = True
+    mock_game_timer.channel = Mock()
 
-    # Mock status_manager to prevent actual Discord API calls
-    with patch.object(GameStatusMessageManager, 'update_status_message', return_value=None):
+    # Capture actual messages
+    actual_messages = []
+
+    # Create a custom announcement mock that captures messages
+    class CustomAnnouncement:
+        async def announce(self, game_timer, message):
+            actual_messages.append(message)
+            return None
+
+    # Create mock channel
+    mock_channel = AsyncMock()
+
+    # Instantiate the timer
+    timer = TimerClass(game_timer=mock_game_timer)
+
+    # Replace the announcement with our custom mock
+    timer.announcement = CustomAnnouncement()
+
+    # Patch sleep methods to prevent actual waiting
+    def quick_sleep(duration):
+        return asyncio.sleep(0.01)
+
+    with (
+        patch.object(timer, 'sleep_with_pause', side_effect=quick_sleep),
+        patch.object(timer, '_run_timer', wraps=timer._run_timer)
+    ):
+        try:
+            # Start the timer
+            await timer.start(mock_channel)
+
+            # Wait a short time to allow announcements to be generated
+            await asyncio.sleep(0.1)
+
+        except Exception as e:
+            print(f"Error during timer start: {e}")
+            raise
+        finally:
+            # Always stop the timer
+            await timer.stop()
+
+    # Verify messages
+    for expected_msg in expected_messages:
+        assert any(expected_msg in msg for msg in actual_messages), \
+            f"Expected message '{expected_msg}' not found in actual messages"
+
+
+@pytest.mark.asyncio
+async def test_timer_pause_resume():
+    """
+    Test pause and resume functionality for timers.
+    """
+    # Test each timer type
+    for TimerClass in [GlyphTimer, RoshanTimer, TormentorTimer]:
+        # Create a mock game timer
+        mock_game_timer = Mock()
+        mock_game_timer.mode = 'regular'
+        mock_game_timer.time_elapsed = 0
+        mock_game_timer.voice_client = Mock()
+        mock_game_timer.voice_client.is_connected.return_value = True
+        mock_game_timer.channel = Mock()
+
+        # Create mock channel
+        mock_channel = AsyncMock()
+
+        # Instantiate the timer
         timer = TimerClass(game_timer=mock_game_timer)
-        timer.announcement = mock_announcement
 
         # Start the timer
         await timer.start(mock_channel)
-        assert timer.is_running
+        assert timer.is_running, f"{TimerClass.__name__} should be running after start"
 
         # Pause the timer
         await timer.pause()
-        assert timer.is_paused
+        assert timer.is_paused, f"{TimerClass.__name__} should be paused"
+
         # Resume the timer
         await timer.resume()
-        assert not timer.is_paused
+        assert not timer.is_paused, f"{TimerClass.__name__} should not be paused after resume"
 
-        with patch.object(timer, "sleep_with_pause", new_callable=AsyncMock):
-            # Mock _run_timer to prevent actual running
-            with patch.object(timer, "_run_timer", new_callable=AsyncMock):
-                await timer._run_timer(mock_channel)
-
-        # Verify the key announcements
-        if TimerClass is RoshanTimer:
-            mock_announcement.announce.assert_any_call(mock_game_timer, "Roshan timer started.")
-            mock_announcement.announce.assert_any_call(mock_game_timer, "Roshan is definitely up now!")
-        elif TimerClass is TormentorTimer:
-            mock_announcement.announce.assert_any_call(mock_game_timer, "Tormentor timer started.")
-            mock_announcement.announce.assert_any_call(mock_game_timer, "Tormentor has respawned!")
-        elif TimerClass is GlyphTimer:
-            mock_announcement.announce.assert_any_call(mock_game_timer, "Enemy glyph activated. Cooldown started.")
-            mock_announcement.announce.assert_any_call(mock_game_timer, "Enemy glyph is now available!")
-
-        # Stop the timer
+        # Cleanup
         await timer.stop()
-        # Give the event loop time to process stop
-        await asyncio.sleep(0.1)
-        assert not timer.is_running

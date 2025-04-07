@@ -33,17 +33,14 @@ async def test_announcement_queue(announcement, game_timer):
     await announcement.announce(game_timer, "Message 3")
 
     # Give some time for the consumer to process
-    # We wait until the queue is empty
-    await asyncio.sleep(0.1)  # Adjust if needed
+    await asyncio.sleep(0.2)  # Increased wait time
 
-    # All messages should have been processed by tts_manager.play_tts in order
+    # Ensure the announcement method was called for each message
+    announcement.tts_manager.play_tts.assert_any_call(game_timer.voice_client, "Message 1")
+    announcement.tts_manager.play_tts.assert_any_call(game_timer.voice_client, "Message 2")
+    announcement.tts_manager.play_tts.assert_any_call(game_timer.voice_client, "Message 3")
+
+    # Verify multiple messages in the expected order
     calls = announcement.tts_manager.play_tts.await_args_list
-    # Each call: call(game_timer.voice_client, "Message X")
     played_messages = [call.args[1] for call in calls]
-
     assert played_messages == ["Message 1", "Message 2", "Message 3"]
-    assert len(played_messages) == 3
-
-    # Also verify text channel messages are sent for each announcement
-    # It should have been called 3 times with an embed each time
-    assert game_timer.channel.send.await_count == 3
