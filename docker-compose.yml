@@ -1,10 +1,34 @@
 version: '3.8'
 
 services:
-  dota-discord-bot:
+  discord-bot:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.bot
+    env_file:
+      - .env
+    environment:
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - WEBHOOK_ID=${WEBHOOK_ID}
+      - GSI_AUTH_TOKEN=${GSI_AUTH_TOKEN}
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./audio:/app/audio
+      - ./tts_cache:/app/tts_cache
+      - ./bot.db:/app/bot.db
+    restart: always
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; exit(0 if os.path.exists('/app/logs/bot.log') else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  webapp:
+    build:
+      context: .
+      dockerfile: Dockerfile.webapp
     env_file:
       - .env
     environment:
@@ -12,15 +36,16 @@ services:
       - WEBHOOK_ID=${WEBHOOK_ID}
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-      - GSI_AUTH_TOKEN=${GSI_AUTH_TOKEN}  # Added GSI auth token
+      - GSI_AUTH_TOKEN=${GSI_AUTH_TOKEN}
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data
-      - ./audio:/app/audio
-      - ./tts_cache:/app/tts_cache
+      - ./bot.db:/app/bot.db
     ports:
       - "5000:5000"  # Expose web dashboard port
     restart: always
+    depends_on:
+      - discord-bot
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/api/status"]
       interval: 30s

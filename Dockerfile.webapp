@@ -1,0 +1,63 @@
+# Build stage for frontend
+FROM node:18-slim as build-frontend
+
+WORKDIR /app/frontend
+
+# Copy package files and install dependencies
+COPY src/webapp/frontend/package*.json ./
+RUN npm ci
+
+# Copy frontend source
+COPY src/webapp/frontend/src ./src
+COPY src/webapp/frontend/public ./public
+
+# Build the frontend
+RUN npm run build
+
+# Production stage for webapp
+FROM python:3.9.13-slim
+
+ENV PYTHONPATH=/app
+ENV ADMIN_USERNAME=${ADMIN_USERNAME}
+ENV ADMIN_PASSWORD=${ADMIN_PASSWORD}
+ENV DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+ENV WEBHOOK_ID=${WEBHOOK_ID}
+ENV GSI_AUTH_TOKEN=${GSI_AUTH_TOKEN}
+
+WORKDIR /app
+
+# Install necessary system dependencies (minimal for webapp only)
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libffi-dev \
+    libssl-dev \
+    python3-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip
+RUN pip install --upgrade pip
+
+# Install only what's needed for the webapp
+RUN pip install flask flask-cors gunicorn python-dotenv SQLAlchemy
+
+# Copy the webapp files
+COPY src/webapp/server.py src/webapp/
+COPY src/webapp/backend src/webapp/backend/
+COPY src/database.py src/
+COPY src/utils/config.py src/utils/
+COPY src/gsi src/gsi/
+COPY src/bot.py src/
+COPY config.yaml .
+
+# Create logs directory
+RUN mkdir -p logs
+
+# Copy the built frontend from the build stage
+COPY --from=build-frontend /app/frontend/build src/webapp/frontend/build
+
+# Expose port
+EXPOSE 5000
+
+# Run the webapp server
+CMD ["python", "src/webapp/server.py"]
