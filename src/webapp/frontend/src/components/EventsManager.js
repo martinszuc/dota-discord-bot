@@ -6,7 +6,7 @@ const EventsManager = () => {
   const [events, setEvents] = useState({ static_events: {}, periodic_events: {} });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [guildId, setGuildId] = useState('');
+  const [guildId, setGuildId] = useState("279614276338188288");
   const [mode, setMode] = useState('regular');
   const [showAddForm, setShowAddForm] = useState(false);
   const [eventType, setEventType] = useState('static');

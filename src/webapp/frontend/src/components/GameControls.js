@@ -15,7 +15,7 @@ import {
 import './GameControls.css';
 
 const GameControls = () => {
-  const [guildId, setGuildId] = useState('');
+  const [guildId, setGuildId] = useState("279614276338188288");
   const [countdown, setCountdown] = useState('10:00');
   const [mode, setMode] = useState('regular');
   const [status, setStatus] = useState(null);

@@ -3,7 +3,7 @@ import { fetchSettings, updateSettings } from '../api';
 import './Settings.css';
 
 const Settings = () => {
-  const [guildId, setGuildId] = useState('');
+  const [guildId, setGuildId] = useState("279614276338188288");
   const [settings, setSettings] = useState({
     prefix: '!',
     timer_channel: 'timer-bot',

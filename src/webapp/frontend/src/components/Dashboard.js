@@ -122,7 +122,7 @@ const Dashboard = () => {
   const [events, setEvents] = useState({ static_events: {}, periodic_events: {} });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeGuild, setActiveGuild] = useState(null);
+  const [activeGuild, setActiveGuild] = useState("279614276338188288");
   const [gsiSyncEnabled, setGsiSyncEnabled] = useState(false);
   const [refreshInterval, setRefreshInterval] = useState(5000); // 5 seconds default
   const [refreshing, setRefreshing] = useState(false);
