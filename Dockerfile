@@ -5,7 +5,7 @@ FROM python:3.9.13-slim
 ENV DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
 ENV WEBHOOK_ID=${WEBHOOK_ID}
 ENV PYTHONPATH=/app
-ENV NODE_VERSION=16.x
+ENV NODE_VERSION=18.x
 
 # Set the working directory
 WORKDIR /app
@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y \
     gnupg \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js for the web dashboard
+# Install Node.js for the web dashboard (upgraded to 18.x)
 RUN curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
@@ -38,6 +38,12 @@ RUN pip install -r requirements.txt \
 
 # Copy the bot code
 COPY . /app
+
+# Create the frontend index.js if missing
+RUN mkdir -p /app/src/webapp/frontend/src
+RUN if [ ! -f /app/src/webapp/frontend/src/index.js ]; then \
+    echo "import React from 'react';\nimport ReactDOM from 'react-dom/client';\nimport './styles.css';\nimport App from './App';\n\nconst root = ReactDOM.createRoot(document.getElementById('root'));\nroot.render(\n  <React.StrictMode>\n    <App />\n  </React.StrictMode>\n);" > /app/src/webapp/frontend/src/index.js; \
+    fi
 
 # Build the React frontend
 WORKDIR /app/src/webapp/frontend
