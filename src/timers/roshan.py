@@ -11,6 +11,9 @@ class RoshanTimer(BaseTimer):
 
     This timer announces the start of Roshan's respawn and schedules warnings leading
     up to Roshan's availability based on the game mode.
+
+    As of Dota 7.38c, Roshan respawns between 8-11 minutes after death (regular mode)
+    or 4-5.5 minutes (turbo mode), and his location alternates between top and bottom.
     """
 
     def __init__(self, game_timer):
@@ -22,6 +25,7 @@ class RoshanTimer(BaseTimer):
         """
         super().__init__(game_timer)
         self.announcement = Announcement()
+        self.kill_count = 0  # Track Roshan kills to determine rewards
         logger.debug(f"RoshanTimer initialized for guild ID {self.game_timer.guild_id}.")
 
     async def _run_timer(self, channel: any) -> None:
@@ -33,18 +37,34 @@ class RoshanTimer(BaseTimer):
         """
         logger.info(f"RoshanTimer running for guild ID {self.game_timer.guild_id}.")
         try:
+            # Increment kill count
+            self.kill_count += 1
+
             # Determine respawn duration based on game mode
             if self.game_timer.mode == 'turbo':
-                min_respawn = 4 * 60    # 4 minutes
+                min_respawn = 4 * 60  # 4 minutes
                 max_respawn = 5.5 * 60  # 5.5 minutes
             else:
-                min_respawn = 8 * 60    # 8 minutes
-                max_respawn = 11 * 60   # 11 minutes
+                min_respawn = 8 * 60  # 8 minutes
+                max_respawn = 11 * 60  # 11 minutes
 
-            logger.debug(f"RoshanTimer set with min_respawn={min_respawn} seconds and max_respawn={max_respawn} seconds.")
+            logger.debug(
+                f"RoshanTimer set with min_respawn={min_respawn} seconds and max_respawn={max_respawn} seconds.")
 
-            # Announce the start of the Roshan timer
-            await self.announcement.announce(self.game_timer, "Roshan timer started.")
+            # Announce the start of the Roshan timer and drops
+            initial_message = "Roshan timer started."
+
+            # Announce Roshan drops based on kill count
+            if self.kill_count == 1:
+                initial_message += " Dropped: Aegis"
+            elif self.kill_count == 2:
+                initial_message += " Dropped: Aegis + Cheese"
+            elif self.kill_count == 3:
+                initial_message += " Dropped: Aegis + Cheese + Refresher Shard"
+            else:  # 4th kill and beyond
+                initial_message += " Dropped: Aegis + Cheese + Refresher Shard + Aghanim's Blessing"
+
+            await self.announcement.announce(self.game_timer, initial_message)
             logger.info(f"Roshan timer started for guild ID {self.game_timer.guild_id}.")
 
             # Short delay before announcing the respawn window
@@ -58,17 +78,27 @@ class RoshanTimer(BaseTimer):
             await self.announcement.announce(self.game_timer, respawn_window_message)
             logger.info(f"Announced Roshan respawn window: '{respawn_window_message}'")
 
+            # Determine next spawn location based on kill count
+            location = "top" if self.kill_count % 2 == 0 else "bottom"
+            location_message = f"Roshan will spawn at {location} lane."
+            await self.announcement.announce(self.game_timer, location_message)
+            logger.info(f"Announced Roshan location: '{location_message}'")
+
             # Define warnings leading up to Roshan's respawn
             warnings = [
                 (min_respawn - 300, "Roshan may respawn in 5 minutes!"),
-                (120,               "Roshan may respawn in 3 minutes!"),
-                (120,               "Roshan may respawn in 1 minute!"),
-                (60,                "Roshan may be up now!"),
+                (120, "Roshan may respawn in 3 minutes!"),
+                (120, "Roshan may respawn in 1 minute!"),
+                (60, "Roshan may be up now!"),
                 ((max_respawn - min_respawn), "Roshan is definitely up now!")
             ]
 
             # Schedule the warnings
             await self.schedule_warnings(warnings, self.announcement)
+
+            # Reset kill count if Roshan wasn't killed again (automatically resets after 3rd kill)
+            if self.kill_count >= 3:
+                self.kill_count = 0
 
         except asyncio.CancelledError:
             logger.info(f"RoshanTimer task cancelled for guild ID {self.game_timer.guild_id}.")
