@@ -3,6 +3,9 @@ import { fetchStatus, fetchLogs, fetchEvents, toggleGSISync } from '../api';
 import GSIStatus from './GSIStatus';
 import './Dashboard.css';
 
+// Default Guild ID
+const DEFAULT_GUILD_ID = "279614276338188288";
+
 // New component for status indicators
 const StatusIndicator = ({ status, label }) => (
   <div className="status-indicator">
@@ -122,7 +125,7 @@ const Dashboard = () => {
   const [events, setEvents] = useState({ static_events: {}, periodic_events: {} });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeGuild, setActiveGuild] = useState("279614276338188288");
+  const [activeGuild, setActiveGuild] = useState(DEFAULT_GUILD_ID);
   const [gsiSyncEnabled, setGsiSyncEnabled] = useState(false);
   const [refreshInterval, setRefreshInterval] = useState(5000); // 5 seconds default
   const [refreshing, setRefreshing] = useState(false);
@@ -162,10 +165,9 @@ const Dashboard = () => {
             console.error("Error fetching events:", err);
           }
         } else if (!events.static_events || Object.keys(events.static_events).length === 0) {
-          // If no active timers, try to fetch events with a default guild ID
+          // If no active timers, try to fetch events with default guild ID
           try {
-            const defaultGuildId = "1";  // A placeholder ID
-            const eventsData = await fetchEvents(defaultGuildId);
+            const eventsData = await fetchEvents(DEFAULT_GUILD_ID);
             setEvents(eventsData.data || { static_events: {}, periodic_events: {} });
           } catch (err) {
             console.error("Error fetching events with default ID:", err);

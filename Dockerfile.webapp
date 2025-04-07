@@ -38,16 +38,24 @@ RUN apt-get update && apt-get install -y \
 # Upgrade pip
 RUN pip install --upgrade pip
 
-# Install only what's needed for the webapp
-RUN pip install flask flask-cors gunicorn python-dotenv SQLAlchemy
+# Copy requirements file
+COPY pip_requirements.txt requirements.txt
+
+# Install Python dependencies
+RUN pip install -r requirements.txt
 
 # Copy the webapp files
 COPY src/webapp/server.py src/webapp/
 COPY src/webapp/backend src/webapp/backend/
 COPY src/database.py src/
-COPY src/utils/config.py src/utils/
+COPY src/utils src/utils/
 COPY src/gsi src/gsi/
 COPY src/bot.py src/
+COPY src/timer.py src/
+COPY src/communication src/communication/
+COPY src/timers src/timers/
+COPY src/managers src/managers/
+COPY src/event_definitions.py src/
 COPY config.yaml .
 
 # Create logs directory
