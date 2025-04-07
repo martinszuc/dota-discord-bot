@@ -7,6 +7,11 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
+    environment:
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - WEBHOOK_ID=${WEBHOOK_ID}
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data

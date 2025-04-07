@@ -1,15 +1,14 @@
 import axios from 'axios';
 
-// Create an axios instance with base URL and common config
 const api = axios.create({
   baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000 // 10 second timeout
+  timeout: 10000,
 });
 
-// Add request interceptor to add authorization token to requests
+// For standard routes requiring the token, attach it in an interceptor:
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -18,19 +17,14 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Add response interceptor to handle 401 Unauthorized errors
+// If the server returns 401, forcibly log out
 api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Clear any stored credentials and reload the page
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
@@ -39,14 +33,12 @@ api.interceptors.response.use(
   }
 );
 
-// Auth endpoints
-export const login = (username, password) => {
-  return axios.post('/auth/login', { username, password });
-};
+// The login call (does NOT use `api` because prefix is '/api'):
+export const login = (username, password) =>
+  axios.post('/auth/login', { username, password });
 
-export const logout = () => {
-  return api.post('/auth/logout');
-};
+// If you want a logout call:
+export const logout = () => api.post('/auth/logout');
 
 // Status endpoints
 export const fetchStatus = () => {
