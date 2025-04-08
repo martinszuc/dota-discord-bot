@@ -12,11 +12,11 @@ services:
       - WEBHOOK_ID=${WEBHOOK_ID}
       - GSI_AUTH_TOKEN=${GSI_AUTH_TOKEN}
     volumes:
-      - ./logs:/app/logs
-      - ./data:/app/data
-      - ./audio:/app/audio
-      - ./tts_cache:/app/tts_cache
-      - ./bot.db:/app/bot.db
+      - ./logs:/app/logs:z
+      - ./data:/app/data:z
+      - ./audio:/app/audio:Z
+      - ./tts_cache:/app/tts_cache:Z
+      - ./bot.db:/app/bot.db:z
     restart: always
     healthcheck:
       test: ["CMD", "python", "-c", "import os; exit(0 if os.path.exists('/app/logs/bot.log') else 1)"]
